@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "BridgeUp"
+version = "1.0.0"
+id = "artifacts/bridgeup"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22374
+
+[services.development]
+run = "pnpm --filter @workspace/bridgeup run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bridgeup", "run", "build" ]
+publicDir = "artifacts/bridgeup/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22374"
+BASE_PATH = "/"
