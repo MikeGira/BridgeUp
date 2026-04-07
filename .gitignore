@@ -189,3 +189,7 @@ Thumbs.db
 .cache/
 .local/
 
+node_modules/
+.env
+*.log
+generated-reports/
