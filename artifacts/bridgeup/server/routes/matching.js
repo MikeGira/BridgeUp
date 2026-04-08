@@ -5,6 +5,11 @@
  *
  * Mounted at /api/matching in index.js.
  *
+ * Security:
+ *   - matchingLimiter (30 req/min per IP) guards the three expensive mutation
+ *     routes (POST /trigger, PATCH /accept, PATCH /decline) in addition to the
+ *     global 100 req/min generalLimiter applied in index.js.
+ *
  * Algorithm overview:
  *   1. Load the need document; verify it has geocoordinates (lat/lng).
  *   2. Query the helpers collection using a lat/lng bounding box (fast Firestore
@@ -21,7 +26,8 @@
  *   6. If no helper found: set need to no_match_found, send honest SMS.
  */
 
-const express  = require('express');
+const express    = require('express');
+const rateLimit  = require('express-rate-limit');
 const {
   db, FieldValue, COLLECTIONS, docToObject, queryToArray, writeAuditLog,
 } = require('../services/firebase');
@@ -29,6 +35,18 @@ const { requireAuth } = require('./auth');
 const { sendSMS }     = require('../services/twilio');
 
 const router = express.Router();
+
+// Tighter per-IP limiter for the three expensive mutation endpoints.
+// These routes execute multi-step Firestore transactions and send SMS messages,
+// so a burst of 100 req/min (the global limit) would exhaust quota and
+// generate unbounded SMS costs. This limiter caps them at 30/min per IP.
+const matchingLimiter = rateLimit({
+  windowMs:        60 * 1000,
+  max:             30,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { error: 'Too many matching requests. Please slow down.' },
+});
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -121,6 +139,25 @@ function scoreHelper(helper, distanceKm) {
   return distanceScore + ratingScore + experienceScore;
 }
 
+// ─── SMS sanitisation helper ───────────────────────────────────────────────────
+
+/**
+ * Strips control characters (including CR, LF, TAB) from a short string token
+ * before it is interpolated into an outbound SMS body.
+ * Defense-in-depth against SMS header injection — need.category, need.location,
+ * and helper.name originally came from user input.
+ *
+ * @param {string} value  Raw value to sanitize
+ * @param {number} max    Maximum length after stripping (default 80)
+ * @returns {string}
+ */
+function sanitizeSMSToken(value, max = 80) {
+  return String(value || '')
+    .replace(/[\r\n\t\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
 // ─── Language helpers for SMS notifications ────────────────────────────────────
 
 // Maps ISO 3166-1 alpha-2 country code → ISO 639-1 language code.
@@ -150,8 +187,8 @@ function getHelperLanguage(countryCode) {
  * @returns {string}
  */
 function buildHelperMatchSMS(language, category, location) {
-  const cat = category || 'assistance';
-  const loc = location  || 'nearby';
+  const cat = sanitizeSMSToken(category || 'assistance', 40);
+  const loc = sanitizeSMSToken(location  || 'nearby',    80);
 
   const t = {
     en: `BridgeUp: You have been matched with someone who needs ${cat} help near ${loc}. Open BridgeUp to accept or decline this match.`,
@@ -170,7 +207,7 @@ function buildHelperMatchSMS(language, category, location) {
  * @returns {string}
  */
 function buildNeedMatchSMS(language, helperName) {
-  const name = String(helperName || 'a helper').slice(0, 60);  // prevent runaway names
+  const name = sanitizeSMSToken(helperName || 'a helper', 60);
 
   const t = {
     en: `BridgeUp: Good news — ${name} has been matched to help you. They will contact you shortly. Reply STOP to opt out.`,
@@ -189,7 +226,7 @@ function buildNeedMatchSMS(language, helperName) {
  * @returns {string}
  */
 function buildMatchAcceptedSMS(language, helperName) {
-  const name = String(helperName || 'Your helper').slice(0, 60);
+  const name = sanitizeSMSToken(helperName || 'Your helper', 60);
 
   const t = {
     en: `BridgeUp: ${name} has accepted your request and will be in touch soon.`,
@@ -225,7 +262,7 @@ function buildDeclineRematchingSMS(language) {
  * @returns {string}
  */
 function buildNoMatchSMS(language, category) {
-  const cat = category || 'your request';
+  const cat = sanitizeSMSToken(category || 'your request', 40);
 
   const t = {
     en: `BridgeUp: We are sorry — no verified helper was found near you for ${cat} right now. We will keep looking and notify you by SMS if one becomes available.`,
@@ -494,7 +531,7 @@ async function runMatching(needId, actorId, excludeIds = []) {
  * Auth:     admin | superadmin
  * Response: { matched: boolean, matchId?, ...matchFields }
  */
-router.post('/trigger', requireAuth, async (req, res) => {
+router.post('/trigger', matchingLimiter, requireAuth, async (req, res) => {
   const { role, userId: actorId, tenantId: callerTenantId } = req.user;
 
   if (!TRIGGER_ROLES.includes(role)) {
@@ -525,7 +562,11 @@ router.post('/trigger', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'Could not load need. Please try again.' });
   }
 
-  if (role === 'admin' && needForAuthCheck.tenantId && needForAuthCheck.tenantId !== callerTenantId) {
+  // Fail-closed: admin may only trigger matching for needs in their own tenant.
+  // Removing the middle `&& needForAuthCheck.tenantId` guard (which was fail-open)
+  // means needs with tenantId: null are also blocked for admins — only superadmin
+  // can trigger matching for anonymous (tenantless) needs.
+  if (role === 'admin' && needForAuthCheck.tenantId !== callerTenantId) {
     return res.status(403).json({
       error: 'Access denied. This need belongs to a different tenant.',
     });
@@ -584,7 +625,9 @@ router.get('/matches', requireAuth, async (req, res) => {
   const { role, userId, phone: callerPhone, tenantId: callerTenantId } = req.user;
 
   const { cursor: rawCursor, status: rawStatus, limit: rawLimit } = req.query;
-  const pageLimit = Math.min(parseInt(rawLimit, 10) || 50, 200);
+  // Clamp to [1, 200] — parseInt may return a negative number if the caller
+  // sends e.g. limit=-1; Firestore throws on negative .limit() values.
+  const pageLimit = Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 200);
 
   const statusFilter = rawStatus && MATCH_STATUSES.includes(String(rawStatus).trim())
     ? String(rawStatus).trim() : null;
@@ -677,7 +720,7 @@ router.get('/matches', requireAuth, async (req, res) => {
  * Auth:     helper only (must own the match via helperUserId)
  * Response: { success: true, match: sanitizedMatch }
  */
-router.patch('/matches/:id/accept', requireAuth, async (req, res) => {
+router.patch('/matches/:id/accept', matchingLimiter, requireAuth, async (req, res) => {
   const { id: rawId } = req.params;
   const { userId, role } = req.user;
 
@@ -768,7 +811,7 @@ router.patch('/matches/:id/accept', requireAuth, async (req, res) => {
  * Auth:     helper only (must own the match via helperUserId)
  * Response: { declined: true, rematched: boolean, newMatchId?, newMatch? }
  */
-router.patch('/matches/:id/decline', requireAuth, async (req, res) => {
+router.patch('/matches/:id/decline', matchingLimiter, requireAuth, async (req, res) => {
   const { id: rawId } = req.params;
   const { userId, role } = req.user;
 
