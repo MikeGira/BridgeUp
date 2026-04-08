@@ -96,26 +96,26 @@ app.use(
   })
 );
 
-// ─── Raw body capture for webhook signature verification ──────────────────────
-// Stripe and Twilio both require the raw unparsed body to verify HMAC signatures.
-// This middleware runs BEFORE express.json() and saves the raw buffer.
-app.use((req, res, next) => {
+// ─── Body parsers + raw body capture ─────────────────────────────────────────
+// The `verify` callback runs inside express.json() / express.urlencoded() before
+// the body is parsed. This is the correct way to capture req.rawBody for webhook
+// signature verification without consuming the readable stream twice (which causes
+// "stream is not readable" errors when a second middleware tries to re-read it).
+//
+// Webhook paths that need raw body access:
+//   /stripe/webhook        — Stripe HMAC-SHA256 via stripe.webhooks.constructEvent
+//   /africastalking/webhook — Africa's Talking pre-shared token
+//   /flutterwave/webhook   — Flutterwave verif-hash header
+
+function captureRawBody(req, res, buf) {
   const webhookPaths = ['/stripe/webhook', '/africastalking/webhook', '/flutterwave/webhook'];
   if (webhookPaths.some((p) => req.path.startsWith(p))) {
-    let data = [];
-    req.on('data', (chunk) => data.push(chunk));
-    req.on('end', () => {
-      req.rawBody = Buffer.concat(data);
-      next();
-    });
-  } else {
-    next();
+    req.rawBody = buf; // Buffer — used by payments.js webhook handlers
   }
-});
+}
 
-// ─── Body parsers ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '1mb', verify: captureRawBody }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', verify: captureRawBody }));
 
 // ─── Global rate limiters ─────────────────────────────────────────────────────
 
