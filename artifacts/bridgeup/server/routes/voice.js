@@ -228,13 +228,20 @@ router.post('/complete', async (req, res) => {
   const twiml = buildGoodbyeTwiML(countryCode);
 
   // ── 3. Audit log — phone redacted to last 4 digits ───────────────────────
+  // Validate CallDuration: Twilio always sends a non-negative integer string ("45").
+  // parseInt() returns NaN on non-numeric input; NaN is invalid in Firestore and
+  // causes unexpected behaviour. Guard with /^\d+$/ before parsing.
+  const durationSeconds = callDuration && /^\d+$/.test(String(callDuration))
+    ? parseInt(callDuration, 10)
+    : null;
+
   writeAuditLog({
     action:   'voice_call_complete',
     actorId:  from ? `phone:***${String(from).slice(-4)}` : 'phone:unknown',
     targetId: callSid || 'unknown',
     meta: {
       countryCode,
-      callDurationSeconds: callDuration ? parseInt(callDuration, 10) : null,
+      callDurationSeconds: durationSeconds,
     },
   }).catch(() => {});
 
@@ -263,32 +270,49 @@ router.post('/status', async (req, res) => {
 
   const { CallSid, CallStatus, CallDuration, From, ErrorCode } = req.body;
 
-  // ── 2. Validate CallStatus against the Twilio allowlist ──────────────────
-  // Prevents arbitrary strings from being written to the audit log if a
-  // signed-but-crafted webhook sends an unexpected status value.
+  // ── 2. Validate all fields from the Twilio body before storing ────────────
+
+  // CallStatus: validate against allowlist — prevents arbitrary strings in audit_log
   const safeStatus = VALID_CALL_STATUSES.includes(CallStatus) ? CallStatus : 'unknown';
 
-  const isFailed    = ['failed', 'busy', 'no-answer', 'canceled'].includes(safeStatus);
+  // CallSid: validate format before using as audit_log targetId.
+  // A spoofed-but-signed webhook could otherwise inject arbitrary strings.
+  const safeCallSid = CallSid && CALLSID_PATTERN.test(String(CallSid))
+    ? String(CallSid)
+    : null;
+
+  // CallDuration: Twilio always sends a non-negative integer string ("45").
+  // parseInt() returns NaN on non-numeric input — guard with /^\d+$/ first.
+  const durationSec = CallDuration && /^\d+$/.test(String(CallDuration))
+    ? parseInt(CallDuration, 10)
+    : null;
+
+  // ErrorCode: Twilio error codes are 4–5 digit numeric strings like "21205".
+  // Reject any non-numeric or oversized value before writing to audit_log.
+  const safeErrorCode = ErrorCode && /^\d{1,5}$/.test(String(ErrorCode))
+    ? String(ErrorCode)
+    : null;
+
+  const isFailed     = ['failed', 'busy', 'no-answer', 'canceled'].includes(safeStatus);
   const fromRedacted = From ? `***${String(From).slice(-4)}` : null;
-  const durationSec  = CallDuration ? parseInt(CallDuration, 10) : null;
 
   // ── 3. Write to audit_log ─────────────────────────────────────────────────
   writeAuditLog({
     action:   isFailed ? 'voice_call_failed' : 'voice_call_status',
     actorId:  'system:twilio',
-    targetId: CallSid || 'unknown',
+    targetId: safeCallSid || 'unknown',
     meta: {
       status:              safeStatus,
       fromRedacted,
       callDurationSeconds: durationSec,
-      errorCode:           ErrorCode || null,
+      errorCode:           safeErrorCode,
     },
   }).catch(() => {});
 
   // ── 4. Log failures conspicuously for on-call monitoring ─────────────────
   if (isFailed) {
     console.error(
-      `[Voice] Call ${safeStatus} | SID: ${CallSid} | From: ${fromRedacted} | Duration: ${durationSec ?? 0}s | Error: ${ErrorCode || 'none'}`
+      `[Voice] Call ${safeStatus} | SID: ${safeCallSid || 'unknown'} | From: ${fromRedacted} | Duration: ${durationSec ?? 0}s | Error: ${safeErrorCode || 'none'}`
     );
   }
 
