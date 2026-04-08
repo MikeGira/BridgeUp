@@ -171,8 +171,13 @@ router.post('/status', async (req, res) => {
 
   const { MessageSid, MessageStatus, To, ErrorCode } = req.body;
 
-  const isFailed    = ['undelivered', 'failed'].includes(MessageStatus);
-  const toRedacted  = To ? `***${String(To).slice(-4)}` : null;
+  // Validate MessageStatus against the known Twilio delivery status enum.
+  // Rejects any value that isn't a recognised status before writing to audit_log.
+  const VALID_SMS_STATUSES = ['queued', 'sending', 'sent', 'delivered', 'undelivered', 'failed', 'read', 'canceled'];
+  const safeStatus = VALID_SMS_STATUSES.includes(MessageStatus) ? MessageStatus : 'unknown';
+
+  const isFailed   = ['undelivered', 'failed'].includes(safeStatus);
+  const toRedacted = To ? `***${String(To).slice(-4)}` : null;
 
   // ── 2. Write structured audit log entry ────────────────────────────────────
   writeAuditLog({
@@ -180,7 +185,7 @@ router.post('/status', async (req, res) => {
     actorId:  'system:twilio',
     targetId: MessageSid || 'unknown',
     meta: {
-      status:    MessageStatus || 'unknown',
+      status:    safeStatus,
       toRedacted,
       errorCode: ErrorCode || null,
     },
@@ -189,7 +194,7 @@ router.post('/status', async (req, res) => {
   // ── 3. Log failures conspicuously — important for on-call monitoring ───────
   if (isFailed) {
     console.error(
-      `[SMS] Delivery ${MessageStatus} | SID: ${MessageSid} | To: ${toRedacted} | ErrorCode: ${ErrorCode || 'none'}`
+      `[SMS] Delivery ${safeStatus} | SID: ${MessageSid} | To: ${toRedacted} | ErrorCode: ${ErrorCode || 'none'}`
     );
   }
 
@@ -217,8 +222,19 @@ router.post('/status', async (req, res) => {
 router.get('/conversations', requireAuth, async (req, res) => {
   const { role } = req.user;
 
-  if (!['admin', 'superadmin'].includes(role)) {
-    return res.status(403).json({ error: 'Access denied. Admin role required.' });
+  // Tenant isolation constraint: sms_queue documents are written by anonymous
+  // pre-auth callers and do not carry a tenantId. There is therefore no safe
+  // Firestore filter that would scope an admin-role user to their own tenant's
+  // conversations only. Allowing admin here would expose every tenant's SMS
+  // conversations to all admin users — a cross-tenant data leak.
+  //
+  // Restricted to superadmin until twilio.js → saveConversationState() is
+  // updated to persist tenantId on conversation documents, after which a
+  // WHERE('tenantId', '==', req.user.tenantId) filter can be added below.
+  if (role !== 'superadmin') {
+    return res.status(403).json({
+      error: 'Access denied. SMS conversation history requires superadmin role.',
+    });
   }
 
   const { cursor: cursorId, step: rawStep, limit: rawLimit } = req.query;
@@ -237,8 +253,15 @@ router.get('/conversations', requireAuth, async (req, res) => {
 
     query = query.orderBy('updatedAt', 'desc').limit(pageLimit);
 
-    // Cursor-based pagination: startAfter the document with the given ID
+    // Cursor-based pagination: startAfter the document with the given ID.
+    // Validate cursorId format before using it as a Firestore document path —
+    // Firestore auto-generated IDs are 20 alphanumeric characters; we allow
+    // 10–128 to handle any future ID scheme. Slashes and dots are forbidden
+    // to prevent document path traversal.
     if (cursorId) {
+      if (!/^[a-zA-Z0-9_-]{10,128}$/.test(String(cursorId))) {
+        return res.status(400).json({ error: 'Invalid cursor value.' });
+      }
       const cursorSnap = await db.collection(COLLECTIONS.SMS_QUEUE).doc(cursorId).get();
       if (cursorSnap.exists) query = query.startAfter(cursorSnap);
     }

@@ -1,0 +1,16 @@
+Before we continue to file 11, please do a security review of the file you just built — artifacts/bridgeup/server/routes/sms.js. Check for and fix these specific vulnerabilities:
+
+NoSQL injection — are all Firestore queries using safe parameterized methods with no raw string concatenation in document paths or query values
+Authentication bypass — can any protected endpoint be accessed without a valid verified JWT token
+Insecure direct object reference — can a user access another user's data by changing an ID in the URL without authorization checks
+Missing input validation — are all user inputs validated, sanitized, and range-checked before being used or stored
+Sensitive data exposure — are any API keys, tokens, full phone numbers, or personal data being logged to console or returned in API responses unnecessarily — phone numbers must show last 4 digits only
+Rate limiting gaps — are there any endpoints missing rate limiting that could be abused by repeated requests
+Webhook verification — are all incoming webhooks from Twilio verifying cryptographic signatures before processing any data
+JWT security — are tokens verified with correct secret, checked for expiry, and is the revocation list check actually executing on every protected request
+File path traversal — is any user input being used to construct file paths, Firestore document paths, or Storage bucket paths without format validation
+Error handling — are internal error messages, stack traces, and library error strings hidden from API responses
+Tenant isolation — can a user in one tenant access or affect data belonging to a different tenant
+Role boundary enforcement — can a user escalate their own privileges or access endpoints above their assigned role
+
+For each issue found: state the exact file path and line number, explain the vulnerability in one plain sentence, and apply the fix immediately. If a file is clean on a specific check, confirm it explicitly. After all fixes are saved, restart the server and confirm it starts cleanly with the correct number of loaded routes before we continue.

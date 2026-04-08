@@ -151,6 +151,14 @@ const voiceLimiter = rateLimit({
   message: { error: 'Voice webhook rate limit exceeded.' },
 });
 
+// SMS webhook limiter — matches voiceLimiter; limits spoofed-signature flood
+// attacks even though they will all be rejected at the HMAC check
+const smsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  message: { error: 'SMS webhook rate limit exceeded.' },
+});
+
 app.use('/api/', generalLimiter);
 
 // ─── Serve static public folder (the PWA frontend) ────────────────────────────
@@ -204,10 +212,11 @@ app.use('/api/helpers', loadRoute('./routes/helpers', 'helpers'));
 app.use('/api/matching', loadRoute('./routes/matching', 'matching'));
 
 // SMS webhook — Twilio inbound SMS from feature phones
-app.use('/sms', loadRoute('./routes/sms', 'sms'));
+app.use('/sms', smsLimiter, loadRoute('./routes/sms', 'sms'));
 
 // SMS admin API — same router, different mount path for /api/sms/conversations
-app.use('/api/sms', loadRoute('./routes/sms', 'sms'));
+// (the /api/ generalLimiter already covers this path; smsLimiter added for defence-in-depth)
+app.use('/api/sms', smsLimiter, loadRoute('./routes/sms', 'sms'));
 
 // Voice IVR webhook — Twilio Voice (Kinyarwanda / Swahili / English / French)
 app.use('/voice', voiceLimiter, loadRoute('./routes/voice', 'voice'));
