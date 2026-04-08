@@ -206,6 +206,9 @@ app.use('/api/matching', loadRoute('./routes/matching', 'matching'));
 // SMS webhook — Twilio inbound SMS from feature phones
 app.use('/sms', loadRoute('./routes/sms', 'sms'));
 
+// SMS admin API — same router, different mount path for /api/sms/conversations
+app.use('/api/sms', loadRoute('./routes/sms', 'sms'));
+
 // Voice IVR webhook — Twilio Voice (Kinyarwanda / Swahili / English / French)
 app.use('/voice', voiceLimiter, loadRoute('./routes/voice', 'voice'));
 
