@@ -221,6 +221,10 @@ app.use('/api/sms', smsLimiter, loadRoute('./routes/sms', 'sms'));
 // Voice IVR webhook — Twilio Voice (Kinyarwanda / Swahili / English / French)
 app.use('/voice', voiceLimiter, loadRoute('./routes/voice', 'voice'));
 
+// Voice admin API — same router, different mount path for /api/voice/calls
+// (the /api/ generalLimiter already covers this path; voiceLimiter for defence-in-depth)
+app.use('/api/voice', voiceLimiter, loadRoute('./routes/voice', 'voice'));
+
 // Payments — Stripe (North America / Europe) + Africa's Talking mobile money
 app.use('/api/payments', loadRoute('./routes/payments', 'payments'));
 app.use('/stripe', loadRoute('./routes/payments', 'stripe-webhooks'));
