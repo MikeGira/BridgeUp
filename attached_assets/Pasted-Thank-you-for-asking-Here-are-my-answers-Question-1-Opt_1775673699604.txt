@@ -1,0 +1,31 @@
+Thank you for asking. Here are my answers:
+Question 1: Option A — Follow the spec exactly. Replace the entire current React/Vite/TypeScript setup with plain HTML/CSS/JS. Delete all React files, Vite config, TypeScript config, and any React dependencies. The project should be a plain Node.js backend with Express serving a plain HTML/CSS/JS frontend as a PWA.
+Question 2: Option A — Switch to Firebase entirely. Remove PostgreSQL and Drizzle ORM completely. All database operations use Firebase Firestore. Authentication uses Firebase Phone Auth for OTP. Do not keep any PostgreSQL code.
+Question 3: Option A — Create all server files from scratch following the spec. None of them exist yet.
+Question 4: Build in this exact sequence, one file at a time. Show me each file after creating it and wait for my go-ahead before the next:
+
+package.json — clean dependencies, remove React/Vite/TypeScript, keep only what the spec requires
+server/index.js — Express server with all routes registered
+server/services/firebase.js — Firebase Firestore connection
+server/services/claude.js — Claude API integration
+server/services/twilio.js — Twilio SMS service
+server/services/voice-service.js — Twilio Voice IVR service
+server/routes/auth.js — Phone OTP authentication
+server/routes/needs.js — Need submission
+server/routes/helpers.js — Helper management
+server/routes/matching.js — AI matching logic
+server/routes/sms.js — SMS webhook
+server/routes/voice.js — Voice IVR webhook
+server/routes/payments.js — Stripe + Africa's Talking
+server/routes/admin.js — Admin dashboard endpoints
+server/routes/reports.js — All 7 report types
+public/manifest.json — PWA manifest
+public/service-worker.js — Offline caching
+public/css/styles.css — Inter font, color system, voice button styles
+public/js/voice.js — Web Speech API mic button, STT, TTS
+public/js/map.js — Leaflet full-screen map, markers, routing
+public/js/chat.js — Claude AI chat interface
+public/js/app.js — Main frontend logic
+public/index.html — Main PWA file bringing everything together
+
+After all files are created, run the server and confirm it starts without errors before we move to testing.
