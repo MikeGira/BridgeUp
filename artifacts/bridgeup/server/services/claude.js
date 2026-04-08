@@ -26,7 +26,7 @@ const TIMEOUT_MS = 30_000;
  */
 const TEXT_INTAKE_SYSTEM = `You are BridgeUp's compassionate intake assistant helping people in need find verified help in their community. BridgeUp connects people in crisis with helpers for food, housing, employment, medical care, training, and funding.
 
-LANGUAGE: Detect the user's language from their very first message. Respond ONLY in that same language for the entire conversation. Never switch languages. Supported: English, French, Kinyarwanda, Swahili, Arabic, Spanish, Portuguese, Amharic, Hausa, Yoruba, Igbo, Zulu, Somali, Tigrinya, and 80+ others.
+LANGUAGE: Detect the user's language from their very first message. Respond ONLY in that same language for the entire conversation. Never switch languages. Fully supported: English, Spanish (all Latin American dialects — Mexican, Colombian, Argentine, Peruvian, Venezuelan, Chilean, and all others), French, Kinyarwanda, Swahili, Arabic, Portuguese, Amharic, Hausa, Yoruba, Igbo, Zulu, Somali, Tigrinya, and 80+ others. For Spanish speakers: always respond in Spanish regardless of which country they are in.
 
 YOUR TASK: Gather the three essential pieces of information needed to match this person with a helper:
 1. What type of help they need (food, housing, employment, medical, training, funding, other)
@@ -225,7 +225,7 @@ async function generateReportSummary(reportType, reportData, options = {}) {
 
   const system = `You are BridgeUp's report analyst. You write clear, plain-language narrative summaries of platform performance data for ${tenantName}. Your audience is decision-makers who are not data scientists — they need insight, not raw numbers.
 
-LANGUAGE: Write the summary in the language with ISO code "${language}".
+LANGUAGE: Write the summary in the language with ISO code "${language}". Fully supported output languages include English, Spanish (all regional variants — use neutral Latin American Spanish for 'es'), French, Kinyarwanda, Swahili, Arabic, Portuguese, and all other languages Claude supports. Never default to English if a different language is specified.
 
 RULES:
 - Write 3–5 short paragraphs (200–400 words total)
@@ -352,11 +352,25 @@ ${text}`,
 async function generateTwilioResponse(transcription, callHistory, callerCountry) {
   // Country-to-language defaults (overridden by Claude's auto-detection)
   const countryLanguage = {
-    RW: 'Kinyarwanda', KE: 'Swahili', TZ: 'Swahili',
-    UG: 'English',     NG: 'English', GH: 'English',
-    SN: 'French',      CI: 'French',  CM: 'French',
-    CA: 'English',     US: 'English', GB: 'English',
-    FR: 'French',      MA: 'Arabic',  EG: 'Arabic',
+    // Africa — East
+    RW: 'Kinyarwanda', KE: 'Swahili',  TZ: 'Swahili',
+    UG: 'English',     NG: 'English',  GH: 'English',
+    // Africa — West / Central / North
+    SN: 'French',      CI: 'French',   CM: 'French',
+    MA: 'Arabic',      EG: 'Arabic',
+    // North America / Europe
+    CA: 'English',     US: 'English',  GB: 'English',
+    FR: 'French',
+    // Spanish-speaking Latin America (all 19 countries)
+    MX: 'Spanish',     ES: 'Spanish',  CO: 'Spanish',
+    AR: 'Spanish',     PE: 'Spanish',  VE: 'Spanish',
+    CL: 'Spanish',     EC: 'Spanish',  GT: 'Spanish',
+    CU: 'Spanish',     BO: 'Spanish',  DO: 'Spanish',
+    HN: 'Spanish',     PY: 'Spanish',  SV: 'Spanish',
+    NI: 'Spanish',     CR: 'Spanish',  PA: 'Spanish',
+    UY: 'Spanish',
+    // Equatorial Guinea — Spanish official language in Africa
+    GQ: 'Spanish',
   };
 
   const expectedLanguage = countryLanguage[callerCountry] || 'English';
