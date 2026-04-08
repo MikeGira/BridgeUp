@@ -112,7 +112,7 @@ async function sendSMS(to, body, from) {
 
   const message = await twilioClient.messages.create({ to, from: fromNumber, body });
 
-  console.log(`[Twilio] SMS sent to ${to} | SID: ${message.sid} | Status: ${message.status}`);
+  console.log(`[Twilio] SMS sent to ***${String(to).slice(-4)} | SID: ${message.sid} | Status: ${message.status}`);
   return { sid: message.sid, status: message.status };
 }
 
@@ -373,9 +373,9 @@ async function triggerSMSMatching(phone, intakeData, language) {
       status: 'pending_match',
       createdAt: FieldValue.serverTimestamp(),
     });
-    console.log(`[Twilio SMS] Matching triggered for ${phone} | Category: ${intakeData.category}`);
+    console.log(`[Twilio SMS] Matching triggered for ***${String(phone).slice(-4)} | Category: ${intakeData.category}`);
   } catch (err) {
-    console.error(`[Twilio SMS] Failed to trigger matching for ${phone}:`, err.message);
+    console.error(`[Twilio SMS] Failed to trigger matching for ***${String(phone).slice(-4)}:`, err.message);
   }
 }
 

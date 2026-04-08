@@ -338,6 +338,12 @@ function buildGreetingTwiML(countryCode, processUrl) {
  * @returns {Promise<string>}     TwiML XML string
  */
 async function processVoiceTurn(callSid, transcription, callerPhone, countryCode, processUrl) {
+  // Validate callSid format before using it as a Firestore document path.
+  // Twilio CallSids are always "CA" + 32 lowercase hex characters (34 chars total).
+  if (!callSid || !/^CA[0-9a-f]{32}$/i.test(callSid)) {
+    throw new Error(`Invalid callSid format: ${String(callSid).slice(0, 10)}`);
+  }
+
   const config = getGreetingByCountryCode(countryCode);
   const ref    = db.collection('voice_calls').doc(callSid);
   const snap   = await ref.get();

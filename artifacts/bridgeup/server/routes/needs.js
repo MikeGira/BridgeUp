@@ -140,7 +140,9 @@ router.post('/', async (req, res) => {
     description,
     language = 'en',
     channel  = 'web',
-    tenantId,
+    // tenantId MUST NOT be accepted from the request body — it is derived from
+    // the JWT below, or left null for anonymous submissions. Accepting it from
+    // the body would allow any anonymous caller to pollute any tenant's queue.
   } = req.body;
 
   // ── Validate phone ──────────────────────────────────────────────────────────
@@ -171,6 +173,9 @@ router.post('/', async (req, res) => {
   // ── Validate channel ────────────────────────────────────────────────────────
   const safeChannel = VALID_CHANNELS.includes(channel) ? channel : 'web';
 
+  // ── Validate language (ISO 639-1: 2–3 lowercase letters) ────────────────────
+  const safeLanguage = /^[a-z]{2,3}$/.test(String(language)) ? String(language) : 'en';
+
   // ── Per-phone daily rate limit ──────────────────────────────────────────────
   let rateCheck;
   try {
@@ -186,9 +191,11 @@ router.post('/', async (req, res) => {
     });
   }
 
-  // ── Resolve userId from JWT if logged in ────────────────────────────────────
+  // ── Resolve userId and tenantId exclusively from JWT if logged in ───────────
+  // tenantId is NEVER taken from req.body — only from a verified JWT claim.
+  // Anonymous submissions always have tenantId = null.
   let userId = null;
-  let callerTenantId = tenantId || null;
+  let callerTenantId = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
@@ -196,8 +203,8 @@ router.post('/', async (req, res) => {
       const decoded = jwt.verify(authHeader.slice(7), process.env.SESSION_SECRET, {
         issuer: 'bridgeup', audience: 'bridgeup-app',
       });
-      userId = decoded.userId || null;
-      if (!callerTenantId) callerTenantId = decoded.tenantId || null;
+      userId         = decoded.userId   || null;
+      callerTenantId = decoded.tenantId || null;
     } catch {
       // Not authenticated — anonymous submission is fine
     }
@@ -212,7 +219,7 @@ router.post('/', async (req, res) => {
     locationGeo:     null,         // populated later by geocoding service
     urgency,
     description:     description ? String(description).trim().slice(0, 1000) : null,
-    language:        String(language).slice(0, 10),
+    language:        safeLanguage,
     channel:         safeChannel,
     status:          'pending_match',
     tenantId:        callerTenantId,
@@ -567,7 +574,9 @@ router.get('/', requireAuth, async (req, res) => {
     if (role === 'admin' || role === 'ngo') {
       if (tenantId) query = query.where('tenantId', '==', tenantId);
     } else if (role === 'helper') {
-      // Helpers see pending/matching (for claiming) + needs assigned to them
+      // Helpers see pending/matching (for claiming) + needs assigned to them,
+      // scoped to their own tenant to prevent cross-tenant data exposure.
+      if (tenantId) query = query.where('tenantId', '==', tenantId);
       query = query.where('status', 'in', ['pending_match', 'matching', 'matched', 'in_progress']);
     }
     // superadmin: no filter — sees everything

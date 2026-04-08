@@ -1,7 +1,8 @@
 'use strict';
 
-const express = require('express');
-const jwt     = require('jsonwebtoken');
+const express  = require('express');
+const jwt      = require('jsonwebtoken');
+const crypto   = require('crypto');
 const { db, FieldValue, COLLECTIONS, writeAuditLog } = require('../services/firebase');
 const { sendOTP, verifyOTP, countryCodeFromPhone }    = require('../services/twilio');
 
@@ -88,6 +89,7 @@ function normalizePhone(raw) {
 function signToken(payload) {
   return jwt.sign(
     {
+      jti:      crypto.randomUUID(), // unique token ID required for revocation
       userId:   payload.userId,
       phone:    payload.phone,
       role:     payload.role,
@@ -146,7 +148,8 @@ async function requireAuth(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(err.status || 401).json({ error: err.message });
+    // Never expose internal JWT library messages to the client
+    res.status(err.status || 401).json({ error: 'Authentication required. Please sign in.' });
   }
 }
 
@@ -288,7 +291,7 @@ router.post('/send-otp', async (req, res) => {
   try {
     result = await sendOTP(e164);
   } catch (err) {
-    console.error(`[Auth] sendOTP failed for ${e164}:`, err.message);
+    console.error(`[Auth] sendOTP failed for ***${e164.slice(-4)}:`, err.message);
     return res.status(502).json({
       error: 'We could not send a verification code right now. Please check your phone number and try again in a moment.',
     });
@@ -341,7 +344,7 @@ router.post('/verify-otp', async (req, res) => {
   try {
     verification = await verifyOTP(e164, cleanCode);
   } catch (err) {
-    console.error(`[Auth] verifyOTP error for ${e164}:`, err.message);
+    console.error(`[Auth] verifyOTP error for ***${e164.slice(-4)}:`, err.message);
     return res.status(500).json({ error: 'Something went wrong verifying your code. Please try again.' });
   }
 
@@ -357,7 +360,7 @@ router.post('/verify-otp', async (req, res) => {
     userData  = result.user;
     isNewUser = result.isNew;
   } catch (err) {
-    console.error(`[Auth] findOrCreateUser error for ${e164}:`, err.message);
+    console.error(`[Auth] findOrCreateUser error for ***${e164.slice(-4)}:`, err.message);
     return res.status(500).json({ error: 'We verified your code but could not load your account. Please try again.' });
   }
 
