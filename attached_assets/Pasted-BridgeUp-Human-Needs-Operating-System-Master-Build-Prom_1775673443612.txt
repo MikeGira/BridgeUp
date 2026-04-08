@@ -1,0 +1,309 @@
+BridgeUp — Human Needs Operating System
+Master Build Prompt v6.0 — Complete Global Edition with Voice
+Project Name: BridgeUp
+Tagline: Post your need. Get matched. Get help. No hassle.
+Vision: Build a full-stack, mobile-first Progressive Web App (PWA) called BridgeUp — an AI-powered platform that matches people in need with verified helpers, resources, jobs, and training in real time. Think Uber and Google Maps combined but for solving poverty, unemployment, food insecurity, and resource gaps. Must work in any language, on smartphones AND feature phones without internet, AND through voice for users with zero literacy. Designed for underserved communities in the USA, Canada, Rwanda, across Africa, and globally.
+
+🗺️ MAPS — UBER/GOOGLE MAPS GRADE EXPERIENCE
+
+Map library: Leaflet.js loaded from CDN — free, no API key
+Tile provider: CartoDB Positron tiles — https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png — clean Google Maps-like appearance, no API key
+Routing: Leaflet Routing Machine — draws animated route line from user to helper
+Clustering: Leaflet.markercluster — groups nearby markers when zoomed out
+Search autocomplete: Nominatim API — free OpenStreetMap geocoding, instant suggestions as user types
+Real-time position: navigator.geolocation.watchPosition() — continuous live tracking, NOT one-time getCurrentPosition
+Map fills 100% viewport width and height — it IS the screen, not a box inside a page
+Use CSS: position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1 on map container
+All UI panels float ON TOP of map as semi-transparent cards with position: fixed; z-index: 100
+User shown as pulsing blue dot with accuracy circle — identical to Google Maps blue dot
+Helper markers are custom colored pins by category: food=orange, employment=blue, housing=green, medical=red, training=purple, other=grey
+Tapping marker slides up bottom sheet with helper profile card and draws animated route line
+Bottom sheet is draggable — collapses to summary, expands to full helper list
+Bottom navigation bar: 4 tabs — Map, My Needs, Helpers, Profile — fixed at bottom
+Category filter pills: horizontal scrollable row above bottom sheet — All, Food, Jobs, Housing, Medical, Training
+Search bar floats at top 16px from screen edge — Nominatim autocomplete within 300ms
+Show real distance and estimated travel time to each helper — updates as user moves
+
+
+🎙️ VOICE INTERFACE — ZERO LITERACY SUPPORT
+This is a core equal feature. Every interaction available through text must also be available through voice. A zero-literacy farmer in Rwanda must access the same help as a tech-savvy Toronto user — through speaking and listening instead of reading and typing.
+Browser Voice — Smartphone PWA
+
+Speech to text: Web Speech API — SpeechRecognition — built into all browsers, free, no API key, no account
+AI processing: Claude API — already in stack, understands Kinyarwanda, Swahili, French, English, Arabic, Spanish and 90+ languages natively
+Text to speech: Web Speech Synthesis API — SpeechSynthesis — built into all browsers, free, no API key, no account
+One large circular microphone button — minimum 120px diameter — centered on screen — no text needed
+Button states with visual and audio feedback:
+
+Idle: solid green #16A34A with subtle pulse — ready to listen
+Listening: amber #F59E0B with radiating ripple rings — hearing the user
+Processing: spinning indicator — thinking
+Speaking: animated sound wave bars — talking back
+
+
+Short chime sound plays when listening starts — confirms to user the app heard the tap
+Live transcription shown as faint text below button — helps literate users verify
+After 2 seconds of silence, recognition ends automatically
+Claude detects language from speech and responds in the SAME language always
+Response spoken aloud via SpeechSynthesis — user never needs to read anything
+After speaking, button returns to idle — ready for next input
+All need categories shown as large icons not text: food=bowl icon, jobs=briefcase, housing=house, medical=cross, training=book, funding=hand with coin
+Every button reads itself aloud when tapped — full screen reader behavior
+If internet lost during voice: plays pre-cached audio "No internet. Your message saved and will send when connection returns"
+Claude system prompt for voice mode: "You are BridgeUp's voice assistant. The user cannot read or write. Speak in simple, warm, conversational {detected_language}. Never use complex words. Keep each response under 3 sentences. Ask only one question at a time. Confirm back what you understood before proceeding."
+
+Feature Phone Voice — Twilio IVR powered by Claude
+
+Set up Twilio Voice phone numbers — one per country: Rwanda, Canada/USA, Kenya
+When user calls, Twilio greets in caller's language based on country code:
+
+Rwanda +250: Kinyarwanda — "Murakaza neza kuri BridgeUp. Vuga ikibazo cyawe."
+Kenya +254: Swahili — "Karibu BridgeUp. Sema unahitaji nini."
+Canada/USA +1: English — "Welcome to BridgeUp. Tell me what you need."
+
+
+Twilio records speech with transcription enabled
+Transcription sent to Claude API via webhook at /voice/process
+Claude responds in maximum 2 simple sentences in caller's language
+Twilio speaks response back using <Say> verb with appropriate language voice
+Conversation continues maximum 5 turns
+After matching: either connects caller directly to helper via Twilio <Dial> or sends SMS with helper contact
+No menu buttons ever — entire call is natural speech
+Voice webhook routes:
+
+POST /voice/answer — handles incoming call, plays greeting, starts recording
+POST /voice/process — receives transcription, sends to Claude, returns TwiML spoken response
+POST /voice/complete — ends conversation, triggers matching, sends SMS confirmation
+
+
+
+WhatsApp Voice — Architecture Placeholder
+
+Add code comments in server/routes/sms.js for future WhatsApp Business API voice note support
+Future flow: receive voice note → download audio → transcribe → Claude → TTS → send audio reply
+Firebase schema ready: voice_messages collection with fields: userId, audioUrl, transcription, claudeResponse, language, timestamp, status
+
+
+🔐 AUTHENTICATION & SECURITY
+
+Person in Need: phone number + SMS OTP only — no password — fast and simple
+Helper/Organization: email + phone verification + manual admin approval — show Pending Approval status
+Admin: secure email + password with full platform control and complete audit logs
+Management/Executive, Donor, Employer, NGO: email + password — role assigned by Admin
+Session tokens stored securely — auto-logout after 30 minutes inactivity
+Rate limiting: maximum 3 need submissions per phone number per 24 hours
+Bad actor detection: 3 negative reviews triggers automatic suspension pending admin review
+All API endpoints protected with rate limiting and input sanitization
+HTTPS enforced — all data encrypted in transit and at rest
+Role-based access control: each role sees only data relevant to their function
+GDPR and CCPA compliant: users can delete account and all data at any time
+Personal data never displayed publicly — only revealed to matched helper after acceptance
+All authentication events logged with timestamp, IP address, device type
+
+
+📍 REAL LOCATION & MATCHING LOGIC
+
+Use navigator.geolocation.watchPosition() for continuous live GPS — not one-time getCurrentPosition
+If GPS denied: show Nominatim autocomplete search bar for manual location entry
+Support: US zip codes, Canadian postal codes, African city/district names, global city names
+NEVER use hardcoded, simulated, or fake location data under any circumstance
+Match helpers by priority: location proximity → category match → availability → rating
+Display real calculated distance and estimated travel time to each helper
+Update distances in real time as user position changes
+If no match exists: honestly inform user, record need, notify when match becomes available
+
+
+🤖 REAL AI INTEGRATION (Claude API)
+
+Use Claude API model claude-sonnet-4-20250514 for ALL conversations — zero hardcoded responses
+Text need intake: maximum 3 dynamic follow-up questions — what, where, how urgent
+Voice need intake: maximum 5 conversational turns — warmer, more natural than text
+Claude detects and responds in user's language automatically — text and voice both
+Claude never invents fictional helpers, organizations, phone numbers, or addresses
+Claude powers Admin AI Assistant — natural language questions about live Firebase data
+Claude powers Management AI Assistant — strategic questions about platform data
+Claude powers Donor AI Assistant — impact and contribution questions
+Claude generates plain-language narrative summaries on every report and dashboard page
+When no match exists Claude says: "We don't have a verified helper in your area yet. We've recorded your request and will notify you when one is available." — spoken aloud in voice mode
+
+
+👥 ROLE-BASED DASHBOARDS — ALL 8 ROLES
+Build completely separate dashboard for each role with live Firebase data, Chart.js charts, AI summaries, PDF and Excel export. All dashboards equal priority to all other features.
+Dashboard 1: Super Admin — global platform, all tenants, revenue, system health, AI assistant
+Dashboard 2: Admin — tenant operations, helper approvals, flagged accounts, audit log, white-label settings
+Dashboard 3: Management/Executive — strategic KPIs, growth trends, board-ready PDF summary, AI assistant
+Dashboard 4: Donor — impact tracking, fund utilization, geographic reach, downloadable impact report, AI assistant
+Dashboard 5: Employer — workforce pipeline, candidate profiles, placement tracking, skills gap report
+Dashboard 6: NGO/Institution — program performance, capacity management, grant readiness report
+Dashboard 7: Helper — incoming matched needs, status pipeline, personal impact counter, ratings, availability toggle
+Dashboard 8: Person in Need — my needs status, helper contact after match, history, re-match option
+Every dashboard includes: live Firebase data, Chart.js interactive charts, AI plain-language summary, PDF export, Excel export, role-filtered data only.
+
+📊 REPORTING MODULE — EQUAL PRIORITY FEATURE
+All 7 reports as dedicated full-page reports with live Firebase data, Chart.js charts, AI narrative summaries, date range selectors, PDF export, Excel export, automated scheduled delivery. Never placeholder or mock data.
+Report 1: Needs & Impact — volume by category/location/urgency, resolution rate trend, unmet needs analysis, AI summary
+Report 2: Helper Performance — all helpers with metrics, filter by country/city/category/rating, AI insights
+Report 3: Geographic Coverage — need vs helper density map, coverage gap analysis highlighted in red, AI expansion recommendations
+Report 4: Donor & NGO Impact — external-facing, grant-ready, one-click PDF for funders, one-click email to donors
+Report 5: Financial & Grant Readiness — grant-formatted impact summary, cost per person helped, projected growth
+Report 6: Compliance & Data Governance — GDPR/CCPA audit, verification status, flagged account log, 7-year retention
+Report 7: SMS & Feature Phone — SMS volume by date/region, resolution rate comparison, feature phone geographic distribution
+Automated scheduled delivery: weekly Monday 8am, monthly 1st, quarterly, annual — via node-cron and nodemailer. All stored in Firebase Storage with version history for 7 years minimum.
+
+💳 PAYMENTS & MONETIZATION — DUAL PAYMENT SYSTEM
+Stripe handles North America and global cards. Africa's Talking handles MTN Mobile Money, Airtel Money, Tigo Cash across Rwanda, Uganda, Kenya, Tanzania, Ghana. Flutterwave available as alternative for 34 African countries. Payment router auto-selects processor by user country — users never see this logic.
+Pricing Tiers
+
+Community: free forever, limited to 1 service area, 10 helpers, basic reporting
+Pro $49/month: up to 3 service areas, 50 helpers, full reporting, 14-day free trial
+Pro $199/month: unlimited service areas, unlimited helpers, all reports, white-label branding, 14-day free trial
+Enterprise: $2,000–$10,000 setup + $1,200–$5,000 annual license — invoice via Stripe or bank transfer
+Donations: any amount, one-time or recurring, Stripe globally, Africa's Talking in Africa
+
+Stripe — Canada, USA, Europe
+
+SDK: npm install stripe (already installed)
+Env vars: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET
+Flows: Checkout Session for Pro signup → Stripe Customer Portal for management → Stripe Invoicing for Enterprise
+Webhook at /stripe/webhook — verify signature on every event — reject unverified with 400
+Payment methods: Visa, Mastercard, Amex, Apple Pay, Google Pay, ACH, SEPA
+
+Africa's Talking — Rwanda, Uganda, Kenya, Tanzania, Ghana, East/Central Africa
+
+SDK: npm install africastalking (already installed)
+Env vars: AT_USERNAME, AT_API_KEY, AT_ENVIRONMENT
+Mobile money: MTN Mobile Money, Airtel Money, Tigo Cash, Equitel, M-Pesa via unified API
+Rwanda currency: RWF — display prices in both USD and RWF with live conversion
+Flow: user enters mobile money phone → payment request sent to handset → user approves with PIN → webhook confirms → Firestore updated → features unlocked
+Webhook at /africastalking/webhook
+SMS payment confirmation in Kinyarwanda and English
+
+Flutterwave — 34 African Countries Alternative
+
+SDK: npm install flutterwave-node-v3 (already installed)
+Env vars: FLW_PUBLIC_KEY, FLW_SECRET_KEY, FLW_ENCRYPTION_KEY
+Webhook at /flutterwave/webhook
+
+Payment Router
+
+File: server/services/payment-router.js
+Canada/USA/Europe → Stripe. Rwanda/Uganda/Kenya/Tanzania/Ghana/Africa → Africa's Talking or Flutterwave. Default → Stripe.
+
+Firestore Subscription Schema
+Fields: tenantId, paymentProcessor, stripeCustomerId, stripeSubscriptionId, atTransactionId, flwTransactionId, mobileMoneyProvider, mobileMoneyPhone, plan, status, currency, currentPeriodEnd, trialEnd, cancelAtPeriodEnd, createdAt
+
+📞 FEATURE PHONE, SMS & ZERO INTERNET SUPPORT
+
+Twilio SMS webhook at /sms/receive processes inbound SMS from any feature phone globally
+Complete 7-step SMS conversation flow with Claude language detection and auto-response in user's language
+All SMS conversations stored in Firebase sms_queue collection — fully reportable
+Twilio Voice IVR webhook routes at /voice/answer, /voice/process, /voice/complete — powered by Claude
+USSD architecture placeholder via Africa's Talking future integration — code comments in place
+WhatsApp voice note architecture placeholder — code comments and schema in place
+Offline PWA: full app state cached via service worker — submissions queued locally and synced on reconnect
+App loads on 2G/3G: all images under 50kb, lazy loaded, scripts deferred
+CartoDB Positron map tiles cached by service worker for offline map viewing of previously visited areas
+
+
+📱 CORE PAGES & FLOWS
+Home — Full Screen Map: map fills viewport, floating search bar top, category filter pills, draggable bottom sheet, bottom nav bar 4 tabs, large microphone voice button accessible from home screen
+Need Submission: slides up as bottom sheet over map, voice OR text intake, Claude AI chat bubbles, location confirmation, urgency selector, "Find Help Now" button
+Helper Profile Card: slides up on marker tap, profile photo placeholder, name/org/verified badge, category tag, rating, distance, time, "X people helped", WhatsApp button, Call button, Get Directions button
+I Can Help Registration: full name, org optional, help types multi-select, service area, contact preference, availability, document upload, pending approval confirmation
+Two-Way Review: post-resolution, 1-5 stars plus comment both directions, shareable Impact Card, 3 negative reviews in 30 days triggers auto-suspension
+Onboarding: 3 swipeable screens, phone number entry, OTP verification, voice tutorial option
+
+🎨 DESIGN REQUIREMENTS
+
+Font: Inter from Google Fonts — load in HTML head
+Primary green: #16A34A — dark hover: #15803D
+Accent amber: #F59E0B
+Background: #F9FAFB — cards: #FFFFFF — borders: #E5E7EB
+Text primary: #111827 — secondary: #6B7280 — tertiary: #9CA3AF
+All cards: white bg, 1px border #E5E7EB, border-radius 16px, padding 16px
+All buttons: border-radius 12px, height 48px minimum, Inter 15px weight 600
+All inputs: border-radius 12px, height 48px, border 1px #E5E7EB, focus border #16A34A
+Spacing: multiples of 4px
+All transitions: 200ms hover, 300ms panel open/close, 500ms page transitions
+Mobile-first, fully responsive 320px to 4K
+Maximum 3 primary elements per screen
+All tap targets minimum 48x48px
+Loading skeleton cards on every list — never blank space
+Human-readable error messages — never raw error codes
+Voice microphone button: 120px diameter minimum, always visible, always accessible
+All screens usable by voice only — no screen requires reading or typing
+
+
+🛠️ COMPLETE TECH STACK
+
+Frontend: HTML5, CSS3, JavaScript ES6+ — single-file PWA with manifest.json and service worker
+Font: Inter from Google Fonts
+Maps: Leaflet.js + CartoDB Positron tiles + Leaflet Routing Machine + Leaflet.markercluster + Nominatim geocoding
+Voice input: Web Speech API SpeechRecognition — native browser, no install
+Voice output: Web Speech Synthesis API SpeechSynthesis — native browser, no install
+Backend: Node.js with Express.js
+Database: Firebase Firestore
+Auth: Firebase Phone Auth OTP + custom JWT for other roles
+AI: Claude API claude-sonnet-4-20250514 — text intake, voice intake, matching, report narratives, all AI assistants
+SMS + feature phone voice: Twilio — OTP, inbound/outbound SMS, Voice IVR with speech recognition and TTS
+Charts: Chart.js
+PDF: pdfkit
+Excel: xlsx library
+Scheduling: node-cron
+Email: nodemailer
+File storage: Firebase Storage
+Global payments: Stripe
+African mobile money: Africa's Talking — MTN, Airtel, Tigo unified
+African payments alternative: Flutterwave
+Payment router: server/services/payment-router.js
+Security: helmet.js, express-rate-limit, input sanitization, webhook signature verification
+Environment: dotenv — all secrets in .env, never hardcoded
+Hosting dev: Replit
+Hosting production: Firebase Hosting frontend + Railway backend
+Version control: GitHub — .env in .gitignore, README.md as portfolio piece
+
+
+🏢 WHITE-LABEL MULTI-TENANT ARCHITECTURE
+
+Each licensed organization gets own fully branded isolated instance
+Admin settings: org name, logo, primary color, accent color, categories, welcome message, SMS sender name, report header, preferred payment methods for their region, voice greeting in their local language
+Complete data isolation — organizations cannot access each other's data
+URL structure: bridgeup.app/[orgname]
+All reports auto-branded with tenant logo and colors
+Each tenant can configure which voice languages are prioritized for their users
+
+
+✅ DEFINITION OF DONE — ALL 30 CHECKPOINTS
+
+Map fills 100% of viewport on iPhone — no white borders
+Blue pulsing dot appears and moves in real time as user physically moves
+Helper markers appear as colored pins by category — animate in — cluster when zoomed out
+Tapping marker slides up helper profile card with smooth animation
+Tapping helper draws animated route line with distance and time label
+Search bar autocomplete returns suggestions within 300ms using Nominatim
+Category filter pills filter map markers instantly
+Bottom sheet draggable — expands to helper list — collapses on map tap
+Bottom navigation bar 4 tabs fixed above safe area on iPhone
+Microphone button visible and tappable from home screen
+Tapping microphone and speaking in Kinyarwanda produces spoken Kinyarwanda response within 3 seconds
+Entire need submission flow completes by voice only — zero typing required
+Calling Twilio Rwanda number produces Kinyarwanda greeting and processes spoken need within 10 seconds
+All screens use Inter font, correct color system, 48px minimum tap targets
+No blank white screens — all loading states show skeletons or spinners
+Person submits need via app with real AI, real GPS, real helper match — no fake data
+Person submits need via SMS from feature phone and receives real helper contact by SMS
+Helper registers, gets approved, receives matches, marks resolved
+Two-way review completes — ratings appear on both profiles
+All 8 role dashboards load with live Firebase data and Chart.js charts
+All 7 reports generate with real data, AI summary, PDF and Excel export
+Weekly automated report email sends successfully
+Canadian user sees Stripe card payment — Rwandan user sees MTN Mobile Money via Africa's Talking
+Both payment flows complete and unlock Pro features automatically via webhook
+Payment router correctly auto-selects processor by user country
+App installs on iPhone via Safari as PWA
+App functions on slow 3G connection
+CartoDB Positron tiles load — clean Google Maps-like visual style
+Zero hardcoded secrets anywhere — all in .env and Replit Secrets
+.env absent from GitHub — README.md tells complete BridgeUp story
+
+
