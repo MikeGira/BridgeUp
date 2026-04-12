@@ -116,8 +116,8 @@ img, svg { display: block; }
   position: fixed;
   z-index: 100;
   background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); /* Safari — vendor prefix first */
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -207,10 +207,17 @@ img, svg { display: block; }
 
 /* ── Keyframe animations ──────────────────────────────────────────────────── */
 
-/* Idle: gentle scale pulse every 2 s */
-@keyframes pulse-idle {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22,163,74,.4); }
-  50%       { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(22,163,74,0); }
+/* Idle: gentle scale pulse every 2 s — split into two GPU-only animations.
+   box-shadow cannot be composited; replaced with a ::after ring using
+   transform + opacity which the browser runs on the GPU compositor thread. */
+@keyframes pulse-idle-scale {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+@keyframes pulse-idle-ring {
+  0%, 30%   { transform: scale(.8);  opacity: 0; }
+  50%        { transform: scale(1.1); opacity: .55; }
+  100%       { transform: scale(1.7); opacity: 0; }
 }
 
 /* Listening: three concentric amber rings radiating outward */
@@ -227,17 +234,19 @@ img, svg { display: block; }
   100% { transform: translate(-50%,-50%) scale(3.4); opacity: 0; }
 }
 
-/* Speaking: five equalizer bars */
-@keyframes wave-bar-1 { 0%,100%{height:8px}  50%{height:28px} }
-@keyframes wave-bar-2 { 0%,100%{height:16px} 50%{height:40px} }
-@keyframes wave-bar-3 { 0%,100%{height:10px} 50%{height:48px} }
-@keyframes wave-bar-4 { 0%,100%{height:20px} 50%{height:36px} }
-@keyframes wave-bar-5 { 0%,100%{height:6px}  50%{height:24px} }
+/* Speaking: five equalizer bars — scaleY only (GPU-composited, zero layout reflow).
+   height animation forces full layout recalculation on every frame; scaleY does not. */
+@keyframes wave-bar-1 { 0%,100%{transform:scaleY(.20)} 50%{transform:scaleY(.70)} }
+@keyframes wave-bar-2 { 0%,100%{transform:scaleY(.40)} 50%{transform:scaleY(1.00)} }
+@keyframes wave-bar-3 { 0%,100%{transform:scaleY(.25)} 50%{transform:scaleY(1.20)} }
+@keyframes wave-bar-4 { 0%,100%{transform:scaleY(.50)} 50%{transform:scaleY(.90)} }
+@keyframes wave-bar-5 { 0%,100%{transform:scaleY(.15)} 50%{transform:scaleY(.60)} }
 
-/* Shimmer for skeletons */
+/* Shimmer for skeletons — transform:translateX on ::after (GPU compositor thread).
+   background-position animation forces a paint pass on every frame; translateX does not. */
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position:  400px 0; }
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
 }
 
 /* ── Voice microphone button ──────────────────────────────────────────────── */
@@ -282,7 +291,18 @@ img, svg { display: block; }
 
 /* Idle state */
 #voice-btn.state-idle {
-  animation: pulse-idle 2s ease-in-out infinite;
+  animation: pulse-idle-scale 2s ease-in-out infinite;
+}
+/* Expanding ring — uses ::after so the ring animates independently of the button.
+   Only transform + opacity are used — both GPU-composited. */
+#voice-btn.state-idle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(22,163,74,.45);
+  pointer-events: none;
+  animation: pulse-idle-ring 2s ease-in-out infinite;
 }
 
 /* Listening state — ripple rings */
@@ -351,17 +371,20 @@ img, svg { display: block; }
 .voice-equalizer span {
   display: block;
   width: 5px;
+  height: 40px;           /* fixed max height — scaleY animates it, not height */
   border-radius: 3px;
   background: #fff;
+  transform-origin: center;
   animation-duration: .8s;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
-.voice-equalizer span:nth-child(1) { height: 8px;  animation-name: wave-bar-1; }
-.voice-equalizer span:nth-child(2) { height: 16px; animation-name: wave-bar-2; animation-delay: .08s; }
-.voice-equalizer span:nth-child(3) { height: 10px; animation-name: wave-bar-3; animation-delay: .16s; }
-.voice-equalizer span:nth-child(4) { height: 20px; animation-name: wave-bar-4; animation-delay: .24s; }
-.voice-equalizer span:nth-child(5) { height: 6px;  animation-name: wave-bar-5; animation-delay: .32s; }
+/* Per-span animation — no height declarations; scaleY handles the visual sizing */
+.voice-equalizer span:nth-child(1) { animation-name: wave-bar-1; }
+.voice-equalizer span:nth-child(2) { animation-name: wave-bar-2; animation-delay: .08s; }
+.voice-equalizer span:nth-child(3) { animation-name: wave-bar-3; animation-delay: .16s; }
+.voice-equalizer span:nth-child(4) { animation-name: wave-bar-4; animation-delay: .24s; }
+.voice-equalizer span:nth-child(5) { animation-name: wave-bar-5; animation-delay: .32s; }
 
 /* ── Bottom sheet ─────────────────────────────────────────────────────────── */
 #bottom-sheet {
@@ -750,10 +773,20 @@ input.is-error {
 
 /* ── Loading skeletons ────────────────────────────────────────────────────── */
 .skeleton {
-  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;                   /* clips the ::after shimmer sweep */
+  background: #F3F4F6;               /* solid base — gradient lives on ::after */
   border-radius: var(--radius-sm);
+}
+/* Shimmer sweep — translateX on ::after stays on the GPU compositor thread.
+   The old pattern (background-position animation) forced a paint pass every frame. */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.65) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
 }
 
 .skeleton-text {
@@ -1206,6 +1239,7 @@ body.is-offline #search-container {
   font-family: 'Inter', sans-serif;
   font-size: 10px;
   background: rgba(255,255,255,.75);
+  -webkit-backdrop-filter: blur(4px); /* Safari — must precede the unprefixed form */
   backdrop-filter: blur(4px);
 }
 
