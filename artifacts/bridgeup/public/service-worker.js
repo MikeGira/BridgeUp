@@ -223,20 +223,51 @@ function openIDB() {
 // exhausting the browser's IndexedDB storage quota.
 const MAX_QUEUE_BODY_BYTES = 100 * 1024;
 
+// Maximum number of pending submissions to hold in IDB.
+// Without a cap, repeated offline taps of Submit could queue dozens of entries
+// that all replay simultaneously on reconnect, amplifying server-side load.
+const MAX_QUEUE_DEPTH = 20;
+
+// Allowlist of headers stored with each queued submission.
+// Storing all headers via forEach() would automatically persist any future
+// credential header (e.g. cookies, custom tokens) added to requests.
+// We keep only the two headers the server actually needs for replay.
+const STORED_HEADERS = ['authorization', 'content-type'];
+
 async function enqueueSubmission(request) {
   try {
-    const url     = request.url;
-    const method  = request.method;
+    const url    = request.url;
+    const method = request.method;
+
+    // Build header map from explicit allowlist — never store all headers
     const headers = {};
-    request.headers.forEach((value, key) => { headers[key] = value; });
-    const body    = await request.text();
+    for (const name of STORED_HEADERS) {
+      const value = request.headers.get(name);
+      if (value) headers[name] = value;
+    }
+
+    const body = await request.text();
 
     if (body.length > MAX_QUEUE_BODY_BYTES) {
       console.warn('[SW] Submission body exceeds size limit (' + body.length + ' bytes) — not queued for offline replay');
       return;
     }
 
-    const db    = await openIDB();
+    const db = await openIDB();
+
+    // Enforce queue depth cap before writing
+    const currentDepth = await new Promise((resolve, reject) => {
+      const tx    = db.transaction(IDB_STORE, 'readonly');
+      const req   = tx.objectStore(IDB_STORE).count();
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror   = (e) => reject(e.target.error);
+    });
+
+    if (currentDepth >= MAX_QUEUE_DEPTH) {
+      console.warn('[SW] Offline queue is full (' + currentDepth + ' entries) — submission not queued');
+      return;
+    }
+
     const entry = { url, method, headers, body, queuedAt: Date.now() };
 
     await new Promise((resolve, reject) => {
@@ -343,10 +374,14 @@ if ('PushManager' in self) {
       if (event.data) {
         try {
           const payload = event.data.json();
-          message = payload.message || payload.body || message;
+          const raw = payload.message || payload.body || message;
+          // Truncate to 200 chars — prevents notification-body injection via
+          // a crafted push payload that sends a multi-kilobyte message string.
+          message = String(raw).slice(0, 200);
         } catch {
           // data is plain text, not JSON
-          message = event.data.text() || message;
+          const raw = event.data.text() || message;
+          message = String(raw).slice(0, 200);
         }
       }
 
