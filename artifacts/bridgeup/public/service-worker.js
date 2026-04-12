@@ -88,7 +88,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ── Strategy 2: Cache-first with size cap for CartoDB map tiles ───────────
-  if (url.hostname.includes('basemaps.cartocdn.com')) {
+  // Exact-match the apex domain and its letter subdomains (a–d).
+  // hostname.includes() is intentionally NOT used — a subdomain like
+  // "attacker-basemaps.cartocdn.com.evil.com" would pass an includes() check
+  // and allow attacker-controlled content into the tile cache.
+  const isCartoTile =
+    url.hostname === 'basemaps.cartocdn.com' ||
+    url.hostname.endsWith('.basemaps.cartocdn.com');
+
+  if (isCartoTile) {
     event.respondWith(tileFirst(request));
     return;
   }
@@ -209,6 +217,12 @@ function openIDB() {
   });
 }
 
+// Maximum body size we will store in IndexedDB (100 KB).
+// The Express server enforces a 1 MB body limit, so anything larger would be
+// rejected on replay anyway. This prevents a buggy or crafted request from
+// exhausting the browser's IndexedDB storage quota.
+const MAX_QUEUE_BODY_BYTES = 100 * 1024;
+
 async function enqueueSubmission(request) {
   try {
     const url     = request.url;
@@ -216,6 +230,11 @@ async function enqueueSubmission(request) {
     const headers = {};
     request.headers.forEach((value, key) => { headers[key] = value; });
     const body    = await request.text();
+
+    if (body.length > MAX_QUEUE_BODY_BYTES) {
+      console.warn('[SW] Submission body exceeds size limit (' + body.length + ' bytes) — not queued for offline replay');
+      return;
+    }
 
     const db    = await openIDB();
     const entry = { url, method, headers, body, queuedAt: Date.now() };
