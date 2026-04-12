@@ -79,6 +79,18 @@ const readLimiter = rateLimit({
   keyGenerator:    (req) => req.user?.userId || req.ip,
 });
 
+// Public: 30/min per IP for unauthenticated endpoints (GET /helper/:id)
+// The global 100/min IP limiter in index.js is too loose for endpoints
+// that perform multiple Firestore reads without any auth gate.
+const publicLimiter = rateLimit({
+  windowMs:        60 * 1000,
+  max:             30,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { error: 'Too many requests. Please wait a moment.' },
+  keyGenerator:    (req) => req.ip,
+});
+
 // ─── Role middleware ──────────────────────────────────────────────────────────
 
 function requireAdminOrSuper(req, res, next) {
@@ -230,6 +242,26 @@ router.post('/submit', requireAuth, submitLimiter, async (req, res, next) => {
     }
     const needId   = match.needId   || null;
     const helperId = match.helperId || null;
+
+    // ── Tenant isolation: match must belong to the reviewer's tenant ──────────
+    // Prevents a user in tenant A from submitting a review on tenant B's match.
+    if (match.tenantId && tenantId && match.tenantId !== tenantId) {
+      return res.status(403).json({
+        error: 'You do not have permission to review this match.',
+      });
+    }
+
+    // ── IDOR guard: reviewer must be a participant in this match ──────────────
+    // Without this, any authenticated user who knows a resolved matchId can
+    // submit a fake review and manipulate a helper's running rating average.
+    // The match document stores `userId` (seeker) and `helperUserId` (helper).
+    const isSeeker = match.userId       && match.userId       === userId;
+    const isHelper = match.helperUserId && match.helperUserId === userId;
+    if (!isSeeker && !isHelper) {
+      return res.status(403).json({
+        error: 'You can only submit a review for a match you participated in.',
+      });
+    }
 
     // ── Duplicate guard ───────────────────────────────────────────────────────
     const dupSnap = await db.collection(COLLECTIONS.REVIEWS)
@@ -420,7 +452,7 @@ router.get('/flagged', requireAuth, requireAdminOrSuper, readLimiter, async (req
  * Sorted by createdAt descending. Cursor-based pagination via ?cursor=<ISO timestamp>.
  * Never returns reviewerId or any phone-derived field.
  */
-router.get('/helper/:id', async (req, res, next) => {
+router.get('/helper/:id', publicLimiter, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -564,7 +596,7 @@ router.post('/:id/flag', requireAuth, readLimiter, async (req, res, next) => {
  * action "remove"  — sets isVisible: false, marks as moderated.
  * Writes an audit log entry and notifies the original reviewer of the outcome.
  */
-router.patch('/:id/moderate', requireAuth, requireAdminOnly, async (req, res, next) => {
+router.patch('/:id/moderate', requireAuth, requireAdminOnly, readLimiter, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { userId, tenantId } = req.user;
