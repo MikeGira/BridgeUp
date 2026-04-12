@@ -726,6 +726,17 @@ function buildPDF(res, reportType, data, aiSummary, { tenantName, dateRangeLabel
     size: 'A4', margin: MARGIN, autoFirstPage: false,
     info: { Title: `BridgeUp — ${REPORT_TITLES[reportType]}`, Author: 'BridgeUp Platform' },
   });
+
+  // ── Fix 3: PDF stream error handling ──────────────────────────────────────────
+  // Once doc.pipe(res) is called the response is committed. If PDFKit emits an
+  // error event after that point we cannot send an HTTP error response, so we
+  // destroy the response stream to signal an abrupt close to the client (they
+  // see a network/download error rather than a silently truncated PDF).
+  doc.on('error', (pdfErr) => {
+    console.error('[Reports] PDFKit stream error:', pdfErr.message);
+    res.destroy(pdfErr);
+  });
+
   doc.pipe(res);
 
   const PW = doc.page.width - MARGIN * 2;
@@ -1233,15 +1244,35 @@ async function resolveReportRequest(req, { bodyOrQuery }) {
     e.status = 400; throw e;
   }
 
-  const rangeResult = parseRange(String(range), startDate, endDate);
+  // ── Fix 1: cap range string length before it can be embedded in an error message
+  const rangeStr = String(range).slice(0, 40);
+  const rangeResult = parseRange(rangeStr, startDate, endDate);
   const tenantId    = getTenantScope(req);
-  const filters     = {
-    country:  country   ? String(country).trim()   : undefined,
-    city:     city      ? String(city).trim()       : undefined,
-    helpType: helpType  ? String(helpType).trim()   : undefined,
-    ratingMin: ratingMin != null ? parseFloat(ratingMin) : undefined,
-    ratingMax: ratingMax != null ? parseFloat(ratingMax) : undefined,
+
+  // ── Fix 2: cap filter string lengths; validate ratingMin/ratingMax as numbers in [0,5]
+  const STR_MAX = 100;
+  const parseRating = (val, label) => {
+    if (val == null) return undefined;
+    const n = parseFloat(val);
+    if (isNaN(n) || n < 0 || n > 5) {
+      const e = new Error(`${label} must be a number between 0 and 5.`);
+      e.status = 400; throw e;
+    }
+    return n;
   };
+  const filters     = {
+    country:  country   ? String(country).trim().slice(0, STR_MAX)   : undefined,
+    city:     city      ? String(city).trim().slice(0, STR_MAX)       : undefined,
+    helpType: helpType  ? String(helpType).trim().slice(0, STR_MAX)   : undefined,
+    ratingMin: parseRating(ratingMin, 'ratingMin'),
+    ratingMax: parseRating(ratingMax, 'ratingMax'),
+  };
+
+  // Additional cross-field validation
+  if (filters.ratingMin != null && filters.ratingMax != null && filters.ratingMin > filters.ratingMax) {
+    const e = new Error('ratingMin must not be greater than ratingMax.');
+    e.status = 400; throw e;
+  }
 
   const { startTs, endTs, label: dateRangeLabel, startDate: sDate, endDate: eDate } = rangeResult;
   const data = await DATA_FETCHERS[type](tenantId, startTs, endTs, sDate, eDate, filters);
