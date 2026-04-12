@@ -131,18 +131,25 @@ function queryToArray(snap) {
 /**
  * Writes a structured entry to the audit_log collection.
  * Called from route handlers when admin actions occur.
+ *
  * @param {Object} params
- * @param {string} params.action   — e.g. 'helper_approved', 'user_suspended'
- * @param {string} params.actorId  — UID of the user who performed the action
- * @param {string} params.targetId — UID or document ID being acted upon
- * @param {Object} [params.meta]   — Additional context (IP, device, old/new values)
+ * @param {string} params.action    — e.g. 'helper_approved', 'user_suspended'
+ * @param {string} params.actorId   — UID of the user who performed the action
+ * @param {string} params.targetId  — UID or document ID being acted upon
+ * @param {Object} [params.meta]    — Additional context (IP, device, old/new values)
+ * @param {string} [params.tenantId] — Tenant ID of the actor. Stored as a top-level
+ *   field so admin users can query only their own tenant's audit entries using
+ *   `.where('tenantId', '==', adminTenantId)`. Superadmins query without this filter
+ *   and see all entries. Existing callers that omit this param receive null — those
+ *   older entries only appear in superadmin views (backwards-compatible).
  */
-async function writeAuditLog({ action, actorId, targetId, meta = {} }) {
+async function writeAuditLog({ action, actorId, targetId, meta = {}, tenantId = null }) {
   try {
     await db.collection(COLLECTIONS.AUDIT_LOG).add({
       action,
       actorId,
       targetId,
+      tenantId,   // top-level for efficient .where('tenantId', '==', ...) queries
       meta,
       timestamp: FieldValue.serverTimestamp(),
     });
