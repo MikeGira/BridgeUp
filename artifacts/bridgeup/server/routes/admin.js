@@ -53,11 +53,21 @@ const EMAIL_PATTERN      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PAGE_SIZE_DEFAULT  = 20;
 const PAGE_SIZE_MAX      = 100;
 
-// ─── AI assistant rate limiter: 20 requests per minute per IP ────────────────
-// Separate from the general 100/min limiter in index.js — Claude API calls are
-// expensive; this prevents a single admin from hammering the AI endpoint.
+// ─── Rate limiters ────────────────────────────────────────────────────────────
+
+// Dashboard: 7 parallel Firestore reads per call — tighter limit than general 100/min
+const dashboardLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many dashboard requests. Please wait before refreshing again.' },
+  keyGenerator: (req) => req.user?.userId || req.ip,
+});
+
+// AI assistant: Claude API calls are expensive — hard cap at 20/min per user
 const aiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
@@ -93,14 +103,26 @@ function requireSuperAdmin(req, res, next) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Masks the phone field in a plain object: "+250788123456" → "***3456".
- * Safe to call on any object — no-ops if no phone field present.
+ * Recursively masks any `phone` field in a plain object or its nested children.
+ * "+250788123456" → "***3456". Safe to call on arrays too (maps over elements).
+ *
+ * Shallow redaction was insufficient: audit log `meta` objects written by other
+ * routes (helpers.js, auth.js, needs.js) may contain a nested `phone` field.
+ * A shallow spread only checked the top level and silently passed `meta.phone`
+ * through to the client response. This recursive version catches all depths.
  */
 function redactPhone(obj) {
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
-  const out = { ...obj };
-  if ('phone' in out && out.phone) {
-    out.phone = '***' + String(out.phone).slice(-4);
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(redactPhone);
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (k === 'phone' && v) {
+      out[k] = '***' + String(v).slice(-4);
+    } else if (v && typeof v === 'object') {
+      out[k] = redactPhone(v);   // recurse into nested objects and arrays
+    } else {
+      out[k] = v;
+    }
   }
   return out;
 }
@@ -254,7 +276,7 @@ async function fetchContextData(question, role, tenantId) {
  *   activeHelpers, pendingApprovals, flaggedAccounts
  * Plus: top 5 helpers by resolution rate (resolved / totalAssigned)
  */
-router.get('/dashboard', requireAuth, requireAdminRole, async (req, res, next) => {
+router.get('/dashboard', requireAuth, requireAdminRole, dashboardLimiter, async (req, res, next) => {
   try {
     const { role, tenantId } = req.user;
     const scopeTid           = role === 'superadmin' ? null : tenantId;
@@ -522,10 +544,18 @@ router.get('/audit-log', requireAuth, requireAdminRole, async (req, res, next) =
 
     query = query.orderBy('timestamp', 'desc');
 
-    // Cursor pagination — fetch the cursor document and startAfter it
+    // Cursor pagination — fetch the cursor document and startAfter it.
+    // IDOR fix: for admin users, verify the cursor document belongs to their
+    // tenant before using it as a pagination position. Without this check an
+    // admin could supply a cursor ID from another tenant's audit log, learn
+    // that the document exists (information disclosure), and influence their
+    // own result page offset using a cross-tenant document reference.
     if (cursor) {
       const cursorDoc = await db.collection(COLLECTIONS.AUDIT_LOG).doc(cursor).get();
       if (cursorDoc.exists) {
+        if (!isSuperAdmin && cursorDoc.data()?.tenantId !== tenantId) {
+          return res.status(400).json({ error: 'Invalid cursor value.' });
+        }
         query = query.startAfter(cursorDoc);
       }
     }
@@ -601,6 +631,28 @@ router.post('/ai-assistant', requireAuth, requireAdminRole, aiLimiter, async (re
     // Cap history depth to prevent token explosion
     if (history.length > 20) {
       return res.status(400).json({ error: 'Conversation history exceeds the 20-turn limit.' });
+    }
+    // Validate each history entry — without this, 20 entries × 100 KB content
+    // fields bypass the 1 000-char question limit and flood Claude with ~2 MB.
+    const VALID_HISTORY_ROLES = new Set(['user', 'assistant']);
+    for (let i = 0; i < history.length; i++) {
+      const turn = history[i];
+      if (!turn || typeof turn !== 'object' || Array.isArray(turn)) {
+        return res.status(400).json({ error: `History entry at index ${i} must be an object.` });
+      }
+      if (!VALID_HISTORY_ROLES.has(turn.role)) {
+        return res.status(400).json({
+          error: `History entry at index ${i} has an invalid role. Must be "user" or "assistant".`,
+        });
+      }
+      if (typeof turn.content !== 'string') {
+        return res.status(400).json({ error: `History entry at index ${i} must have a string content field.` });
+      }
+      if (turn.content.length > 2_000) {
+        return res.status(400).json({
+          error: `History entry at index ${i} content exceeds the 2 000-character limit.`,
+        });
+      }
     }
 
     // ── Fetch relevant Firestore context ────────────────────────────────────────
