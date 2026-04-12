@@ -294,6 +294,15 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`║  Static files: ./public                          ║`);
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
+
+  // Start report scheduler (node-cron) — after all routes are mounted so
+  // DATA_FETCHERS in reports.js are fully initialised before first job fires.
+  try {
+    const { startScheduler } = require('./services/scheduler');
+    startScheduler();
+  } catch (err) {
+    console.error('[BridgeUp] Scheduler failed to start:', err.message);
+  }
 });
 
 module.exports = app;
