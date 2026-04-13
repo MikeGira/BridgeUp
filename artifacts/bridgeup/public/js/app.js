@@ -485,12 +485,15 @@
   // ── Service worker registration ──────────────────────────────
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
+    // Skip SW on localhost: the dev preview proxy serves resources over plain
+    // HTTP and a previously installed SW can return stale 503 responses that
+    // shadow the live server.  SW is only registered in production (HTTPS).
     if (
-      location.protocol !== "https:" &&
-      location.hostname !== "localhost" &&
-      location.hostname !== "127.0.0.1"
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1"
     )
       return;
+    if (location.protocol !== "https:") return;
 
     navigator.serviceWorker
       .register("/service-worker.js", { scope: "/" })

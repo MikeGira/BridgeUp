@@ -62,16 +62,28 @@ app.use(
         ],
         mediaSrc: ["'self'", "blob:"],
         workerSrc: ["'self'", "blob:"],
-        // Allow framing from Replit preview and same origin
+        // Allow framing from Replit preview and same origin.
+        // *.worf.replit.dev must be listed explicitly — CSP wildcards only
+        // match one subdomain level, so *.replit.dev does NOT cover
+        // <hash>.worf.replit.dev (two levels under replit.dev).
         frameAncestors: [
           "'self'",
           "https://*.replit.com",
           "https://*.replit.dev",
+          "https://*.worf.replit.dev",
           "https://*.repl.co",
         ],
+        // Remove upgrade-insecure-requests: when the Replit preview loads the
+        // app over HTTP (http://localhost:80), this directive upgrades every
+        // sub-resource fetch to HTTPS — including http://localhost/js/app.js →
+        // https://localhost/js/app.js which has no TLS listener and causes 503.
+        upgradeInsecureRequests: null,
       },
     },
     crossOriginEmbedderPolicy: false,
+    // unsafe-none allows the Replit canvas iframe to share a browsing context
+    // so postMessage and window references work for the preview pane.
+    crossOriginOpenerPolicy: { policy: "unsafe-none" },
     // Disable X-Frame-Options so frameAncestors CSP takes control
     frameguard: false,
   }),
@@ -165,11 +177,21 @@ const smsLimiter = rateLimit({
 app.use("/api/", generalLimiter);
 
 // ─── Static files ──────────────────────────────────────────────────────────────
+// In development, disable all caching so code changes are visible instantly
+// without a hard refresh.  In production, keep a 24-hour max-age for
+// performance (CDN / browser cache hit rate).
+const isDev = process.env.NODE_ENV !== "production";
 app.use(
   express.static(path.join(__dirname, "..", "public"), {
-    maxAge: "1d",
-    etag: true,
+    maxAge: isDev ? 0 : "1d",
+    etag: !isDev,
+    lastModified: !isDev,
     index: "index.html",
+    setHeaders: isDev
+      ? function (res) {
+          res.set("Cache-Control", "no-store");
+        }
+      : undefined,
   }),
 );
 

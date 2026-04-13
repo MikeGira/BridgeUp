@@ -46,34 +46,46 @@
       href="/images/icon-192.png"
     />
 
-    <!-- Fonts -->
+    <!-- Fonts: loaded asynchronously so a blocked CDN never delays first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
 
-    <!-- Leaflet CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-    />
-
-    <!-- Leaflet MarkerCluster CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css"
-    />
+    <!-- Leaflet CSS — served locally so the service worker can cache them
+         and so the app works in offline / restricted-network environments. -->
+    <link rel="stylesheet" href="/lib/leaflet.min.css" />
+    <link rel="stylesheet" href="/lib/MarkerCluster.min.css" />
+    <link rel="stylesheet" href="/lib/MarkerCluster.Default.min.css" />
 
     <!-- BridgeUp styles -->
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <!-- Dev guard: service workers cause stale-cache issues in local preview
+         environments.  On localhost we unregister any existing SW immediately
+         so that resources load straight from the dev server.  The SW is only
+         active in production (non-localhost) where caching is safe. -->
+    <script>
+      (function () {
+        if ('serviceWorker' in navigator && location.hostname === 'localhost') {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (r) { r.unregister(); });
+          });
+        }
+      })();
+    </script>
+
     <!-- ═══════════════════════════════════════════════════════════
        OFFLINE BANNER
   ════════════════════════════════════════════════════════════ -->
@@ -558,11 +570,9 @@
        SCRIPTS — order matters
   ════════════════════════════════════════════════════════════ -->
 
-    <!-- Leaflet JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
-    <!-- Leaflet MarkerCluster -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+    <!-- Leaflet JS — served locally so the service worker can cache them -->
+    <script src="/lib/leaflet.min.js"></script>
+    <script src="/lib/leaflet.markercluster.min.js"></script>
 
     <!-- BridgeUp modules — load order: voice → map → chat → app -->
     <script src="/js/voice.js"></script>

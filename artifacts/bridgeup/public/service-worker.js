@@ -2,7 +2,7 @@
 
 // ─── Cache versioning ─────────────────────────────────────────────────────────
 // Increment CACHE_VERSION to bust all cached assets on the next visit.
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME    = 'bridgeup-' + CACHE_VERSION;
 
 // ─── Static assets to pre-cache on install ───────────────────────────────────
@@ -10,6 +10,13 @@ const PRECACHE_URLS = [
   '/',
   '/manifest.json',
   '/css/styles.css',
+  // Leaflet and MarkerCluster are served locally so they are available offline
+  // and are never routed through the CDN (which may be blocked in some envs).
+  '/lib/leaflet.min.css',
+  '/lib/MarkerCluster.min.css',
+  '/lib/MarkerCluster.Default.min.css',
+  '/lib/leaflet.min.js',
+  '/lib/leaflet.markercluster.min.js',
   '/js/app.js',
   '/js/map.js',
   '/js/chat.js',
@@ -34,6 +41,11 @@ const QUEUE_PATHS = ['/api/needs', '/api/reviews/submit'];
 // INSTALL — pre-cache static shell; partial failure is allowed
 // =============================================================================
 self.addEventListener('install', (event) => {
+  // Skip the waiting phase immediately so the new SW version activates and
+  // takes control without requiring a full browser close/reopen cycle.
+  // This is safe here because we bust the cache by incrementing CACHE_VERSION.
+  self.skipWaiting();
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       // addAll is all-or-nothing, so we cache each URL individually so that
