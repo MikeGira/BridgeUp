@@ -643,3 +643,23 @@
     logout: logout,
   };
 })();
+
+// Emergency bootstrap fix
+document.addEventListener('DOMContentLoaded', function() {
+  var ob = document.getElementById('onboarding-screen');
+  var auth = document.getElementById('auth-screen');
+  var main = document.getElementById('main-app');
+  if (ob) ob.style.display = '';
+  if (auth) auth.style.display = 'none';
+  if (main) main.style.display = 'none';
+});
+
+// Emergency bootstrap fix
+document.addEventListener('DOMContentLoaded', function() {
+  var ob = document.getElementById('onboarding-screen');
+  var auth = document.getElementById('auth-screen');
+  var main = document.getElementById('main-app');
+  if (ob) ob.style.display = '';
+  if (auth) auth.style.display = 'none';
+  if (main) main.style.display = 'none';
+});

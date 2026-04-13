@@ -78,9 +78,11 @@
          active in production (non-localhost) where caching is safe. -->
     <script>
       (function () {
-        if ('serviceWorker' in navigator && location.hostname === 'localhost') {
+        if ("serviceWorker" in navigator && location.hostname === "localhost") {
           navigator.serviceWorker.getRegistrations().then(function (regs) {
-            regs.forEach(function (r) { r.unregister(); });
+            regs.forEach(function (r) {
+              r.unregister();
+            });
           });
         }
       })();
@@ -104,7 +106,7 @@
     <!-- ═══════════════════════════════════════════════════════════
        ONBOARDING SCREEN
   ════════════════════════════════════════════════════════════ -->
-    <div id="onboarding-screen" style="display: none">
+    <div id="onboarding-screen">
       <button
         id="onboarding-skip"
         class="onboarding-skip-btn"
