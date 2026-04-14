@@ -179,7 +179,7 @@ async function verifyOTP(phone, code) {
     return { valid: false, reason: 'Too many incorrect attempts. Please request a new code.' };
   }
 
-  if (new Date() > data.expiresAt.toDate()) {
+  if (new Date() > (typeof data.expiresAt?.toDate === "function" ? data.expiresAt.toDate() : new Date(data.expiresAt))) {
     return { valid: false, reason: 'This code has expired. Please request a new one.' };
   }
 
