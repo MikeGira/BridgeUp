@@ -181,18 +181,60 @@ const db = {
         await restRequest('PATCH', '/' + colName + '/' + id, toFirestore(data));
         return { id };
       },
-      where() { return this; },
-      orderBy() { return this; },
-      limit() { return this; },
+      _filters: [],
+      _limit: null,
+      _orderBy: null,
+      where(field, op, value) {
+        const clone = db.collection(colName);
+        clone._filters = [...(this._filters || []), { field, op, value }];
+        clone._limit = this._limit;
+        return clone;
+      },
+      orderBy(field, dir) {
+        const clone = db.collection(colName);
+        clone._filters = this._filters || [];
+        clone._limit = this._limit;
+        clone._orderBy = { field, dir };
+        return clone;
+      },
+      limit(n) {
+        const clone = db.collection(colName);
+        clone._filters = this._filters || [];
+        clone._orderBy = this._orderBy;
+        clone._limit = n;
+        return clone;
+      },
       async get() {
-        const res = await restRequest('GET', '/' + colName);
-        const docs = (res.documents || []).map(d => ({
-          exists: true,
-          id: d.name.split('/').pop(),
-          data: () => fromFirestore(d),
-          ...fromFirestore(d),
-        }));
-        return { docs, empty: docs.length === 0, size: docs.length };
+        const res = await restRequest('GET', '/' + colName + '?pageSize=1000');
+        const allDocs = (res.documents || []).map(d => {
+          const id = d.name.split('/').pop();
+          const data = fromFirestore(d);
+          return {
+            exists: true,
+            id,
+            ref: db.collection(colName).doc(id),
+            data: () => data,
+            ...data,
+          };
+        });
+        // Apply where filters client-side
+        let filtered = allDocs;
+        for (const f of (this._filters || [])) {
+          filtered = filtered.filter(doc => {
+            const val = doc[f.field];
+            if (f.op === '==' || f.op === '===') return val == f.value;
+            if (f.op === '!=') return val != f.value;
+            if (f.op === '>') return val > f.value;
+            if (f.op === '<') return val < f.value;
+            if (f.op === '>=') return val >= f.value;
+            if (f.op === '<=') return val <= f.value;
+            if (f.op === 'in') return Array.isArray(f.value) && f.value.includes(val);
+            if (f.op === 'array-contains') return Array.isArray(val) && val.includes(f.value);
+            return true;
+          });
+        }
+        if (this._limit) filtered = filtered.slice(0, this._limit);
+        return { docs: filtered, empty: filtered.length === 0, size: filtered.length };
       },
     };
   },
