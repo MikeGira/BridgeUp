@@ -11,8 +11,6 @@
       name="description"
       content="BridgeUp — AI-powered platform connecting people in need with verified helpers, jobs, training and resources in real time."
     />
-
-    <!-- PWA iOS meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
@@ -20,8 +18,6 @@
     />
     <meta name="apple-mobile-web-app-title" content="BridgeUp" />
     <meta name="mobile-web-app-capable" content="yes" />
-
-    <!-- Open Graph -->
     <meta property="og:title" content="BridgeUp — Get Help. Give Help." />
     <meta
       property="og:description"
@@ -29,84 +25,45 @@
     />
     <meta property="og:image" content="/images/icon-512.png" />
     <meta property="og:type" content="website" />
-
     <title>BridgeUp</title>
-
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-
-    <!-- iOS icons -->
     <link rel="apple-touch-icon" href="/images/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/images/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/images/icon-512.png" />
     <link
       rel="icon"
       type="image/png"
       sizes="192x192"
       href="/images/icon-192.png"
     />
-
-    <!-- Fonts: loaded asynchronously so a blocked CDN never delays first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="preload"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      as="style"
-      onload="this.rel='stylesheet'"
+      rel="stylesheet"
     />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
-
-    <!-- Leaflet CSS — served locally so the service worker can cache them
-         and so the app works in offline / restricted-network environments. -->
-    <link rel="stylesheet" href="/lib/leaflet.min.css" />
-    <link rel="stylesheet" href="/lib/MarkerCluster.min.css" />
-    <link rel="stylesheet" href="/lib/MarkerCluster.Default.min.css" />
-
-    <!-- BridgeUp styles -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css"
+    />
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
-    <!-- Dev guard: service workers cause stale-cache issues in local preview
-         environments.  On localhost we unregister any existing SW immediately
-         so that resources load straight from the dev server.  The SW is only
-         active in production (non-localhost) where caching is safe. -->
-    <script>
-      (function () {
-        if ("serviceWorker" in navigator && location.hostname === "localhost") {
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            regs.forEach(function (r) {
-              r.unregister();
-            });
-          });
-        }
-      })();
-    </script>
-
-    <!-- ═══════════════════════════════════════════════════════════
-       OFFLINE BANNER
-  ════════════════════════════════════════════════════════════ -->
     <div
       id="offline-banner"
       style="display: none"
       role="alert"
       aria-live="polite"
     ></div>
-
-    <!-- ═══════════════════════════════════════════════════════════
-       TOAST NOTIFICATIONS
-  ════════════════════════════════════════════════════════════ -->
     <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-       ONBOARDING SCREEN
-  ════════════════════════════════════════════════════════════ -->
-    <div id="onboarding-screen">
+    <div id="onboarding-screen" style="display: none">
       <button
         id="onboarding-skip"
         class="onboarding-skip-btn"
@@ -114,7 +71,6 @@
       >
         Skip
       </button>
-
       <div class="onboarding-slides">
         <div class="onboarding-slide active">
           <div class="onboarding-icon" aria-hidden="true">🌍</div>
@@ -125,7 +81,6 @@
           </p>
           <button class="btn-primary onboarding-next">Get Started</button>
         </div>
-
         <div class="onboarding-slide">
           <div class="onboarding-icon" aria-hidden="true">🎙️</div>
           <h1 class="onboarding-title">Just Speak</h1>
@@ -136,7 +91,6 @@
           </p>
           <button class="btn-primary onboarding-next">Next</button>
         </div>
-
         <div class="onboarding-slide">
           <div class="onboarding-icon" aria-hidden="true">🤝</div>
           <h1 class="onboarding-title">Real Help. Real People.</h1>
@@ -148,7 +102,6 @@
           <button class="btn-primary onboarding-next">Let's Go</button>
         </div>
       </div>
-
       <div class="onboarding-dots" aria-hidden="true">
         <span class="onboarding-dot active"></span>
         <span class="onboarding-dot"></span>
@@ -156,9 +109,6 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-       AUTH SCREEN
-  ════════════════════════════════════════════════════════════ -->
     <div id="auth-screen" style="display: none">
       <div class="auth-card">
         <div class="auth-logo" aria-hidden="true">
@@ -170,8 +120,6 @@
           />
         </div>
         <h2 class="auth-title">Sign In to BridgeUp</h2>
-
-        <!-- Phone step -->
         <div id="phone-step">
           <p class="auth-subtitle">
             Enter your phone number to receive a verification code.
@@ -196,8 +144,6 @@
             We will send a 6-digit code by SMS. Standard rates apply.
           </p>
         </div>
-
-        <!-- OTP step -->
         <div id="otp-step" style="display: none">
           <p class="auth-subtitle">
             Enter the 6-digit code sent to
@@ -228,18 +174,12 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-       MAIN APP
-  ════════════════════════════════════════════════════════════ -->
     <div id="main-app" style="display: none">
-      <!-- ── Full screen map ─────────────────────────────────── -->
       <div
         id="map"
         role="application"
         aria-label="Map showing helpers near you"
       ></div>
-
-      <!-- ── Search bar ──────────────────────────────────────── -->
       <div id="search-container" class="search-container" role="search">
         <input
           id="search-input"
@@ -262,8 +202,6 @@
           aria-label="Location suggestions"
         ></div>
       </div>
-
-      <!-- ── Category filter pills ───────────────────────────── -->
       <div
         class="category-pills-row"
         role="group"
@@ -287,15 +225,11 @@
           💰 Funding
         </button>
       </div>
-
-      <!-- ── Helper count badge ──────────────────────────────── -->
       <div
         id="helper-count"
         class="helper-count-badge"
         aria-live="polite"
       ></div>
-
-      <!-- ── Voice microphone button ─────────────────────────── -->
       <div class="voice-btn-container">
         <button
           id="voice-btn"
@@ -341,8 +275,6 @@
           aria-atomic="true"
         ></div>
       </div>
-
-      <!-- ── Action buttons ──────────────────────────────────── -->
       <div class="action-buttons">
         <button id="need-help-btn" class="btn-primary action-btn">
           I Need Help
@@ -351,8 +283,6 @@
           I Can Help
         </button>
       </div>
-
-      <!-- ── Bottom sheet ────────────────────────────────────── -->
       <div
         id="bottom-sheet"
         class="bottom-sheet"
@@ -368,8 +298,6 @@
         ></div>
         <div id="helper-card-content" class="helper-card-content"></div>
       </div>
-
-      <!-- ── Chat panel ──────────────────────────────────────── -->
       <div
         id="chat-panel"
         class="chat-panel"
@@ -422,8 +350,6 @@
           </p>
         </div>
       </div>
-
-      <!-- ── Bottom navigation ────────────────────────────────── -->
       <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
         <button
           class="nav-tab active"
@@ -488,10 +414,7 @@
           <span>Profile</span>
         </button>
       </nav>
-
-      <!-- ── Tab panels ──────────────────────────────────────── -->
       <div class="tab-panels">
-        <!-- Needs panel -->
         <div class="tab-panel" data-panel="needs">
           <div class="panel-header">
             <h2 class="panel-title">My Needs</h2>
@@ -508,8 +431,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Helpers panel -->
         <div class="tab-panel" data-panel="helpers">
           <div class="panel-header">
             <h2 class="panel-title">Helpers Near You</h2>
@@ -526,8 +447,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Profile panel -->
         <div class="tab-panel" data-panel="profile">
           <div class="panel-header">
             <h2 class="panel-title">My Profile</h2>
@@ -542,8 +461,6 @@
               <span id="profile-role" class="profile-value"></span>
             </div>
           </div>
-
-          <!-- Language selector -->
           <div class="language-selector">
             <h3 class="section-title">Language</h3>
             <div
@@ -559,24 +476,15 @@
               <button class="lang-btn" data-lang="ar">العربية</button>
             </div>
           </div>
-
           <button id="logout-btn" class="btn-destructive btn-full">
             Sign Out
           </button>
         </div>
       </div>
     </div>
-    <!-- end #main-app -->
 
-    <!-- ═══════════════════════════════════════════════════════════
-       SCRIPTS — order matters
-  ════════════════════════════════════════════════════════════ -->
-
-    <!-- Leaflet JS — served locally so the service worker can cache them -->
-    <script src="/lib/leaflet.min.js"></script>
-    <script src="/lib/leaflet.markercluster.min.js"></script>
-
-    <!-- BridgeUp modules — load order: voice → map → chat → app -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
     <script src="/js/voice.js"></script>
     <script src="/js/map.js"></script>
     <script src="/js/chat.js"></script>

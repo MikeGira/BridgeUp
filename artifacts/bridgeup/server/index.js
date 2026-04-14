@@ -65,7 +65,7 @@ app.use(
         mediaSrc: ["'self'", "blob:"],
         workerSrc: ["'self'", "blob:"],
         scriptSrcAttr: ["'unsafe-inline'"],
-        
+
         // Allow framing from Replit preview and same origin.
         // *.worf.replit.dev must be listed explicitly — CSP wildcards only
         // match one subdomain level, so *.replit.dev does NOT cover

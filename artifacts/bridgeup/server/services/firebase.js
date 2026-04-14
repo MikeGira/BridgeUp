@@ -35,6 +35,8 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id,
+      databaseURL: 'https://bridgeup-production.firebaseio.com',
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
     console.log('[Firebase] Admin SDK initialised successfully.');
