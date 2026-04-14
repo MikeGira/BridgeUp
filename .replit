@@ -1,10 +1,13 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-3.11"]
 
 [[artifacts]]
 id = "artifacts/api-server"
 
 [[artifacts]]
 id = "artifacts/mockup-sandbox"
+
+[[artifacts]]
+id = "artifacts/bridgeup"
 
 [deployment]
 router = "application"
@@ -28,6 +31,4 @@ timeoutMs = 20000
 [[ports]]
 localPort = 3000
 externalPort = 80
-
-[[artifacts]]
-id = "artifacts/bridgeup"
+exposeLocalhost = true
