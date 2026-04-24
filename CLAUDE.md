@@ -1,106 +1,161 @@
 # BridgeUp — Project CLAUDE.md
-# File location: /path/to/BridgeUp2.1/CLAUDE.md
-# Check this into git so it travels with the project
 
-## PROJECT OVERVIEW
-BridgeUp is a human needs matching platform. People post needs (food, shelter, skills, services)
-and the platform matches them with people/organizations that can help.
+## WHAT IS BRIDGEUP
+An AI-powered human needs operating system. People post needs (food, shelter, skills, jobs, services, training) and get matched with verified helpers and organizations. Target communities: underserved populations in Canada and Rwanda/Africa.
 
-See @README.md for full project overview.
-See @package.json for available npm commands.
-
-## CURRENT STATUS (update this as features complete)
-- ✅ Express server on Replit port 3000
-- ✅ Onboarding screens (3 slides)
-- ✅ Twilio SMS OTP working
+## CURRENT STATUS (update as features complete)
+- ✅ Express server (port 3000) with Helmet + CORS + rate limiting
+- ✅ Firebase Admin + Firestore (preferRest: true required)
+- ✅ AfricasTalking SMS + Voice OTP auth
 - ✅ JWT authentication
-- ✅ localStorage onboarding flag (bridgeup_onboarded)
-- ⚠️  Firestore — intermittently working, preferRest: true required
-- 🔲 User profile completion
-- 🔲 Need posting feature
-- 🔲 Matching algorithm
-- 🔲 Chat/messaging between matched users
+- ✅ React frontend (Vite + shadcn/ui)
+- ✅ Anthropic Claude SDK integrated (services/claude.js)
+- ✅ Stripe + Flutterwave payment routes wired
+- ✅ node-cron scheduler
+- ✅ PDF generation (pdfkit), file uploads (multer)
+- 🔲 Matching algorithm (route exists, logic TBD)
+- 🔲 In-app messaging between matched users
+- 🔲 Admin dashboard fully functional
 
 ## TECH STACK
-- **Runtime**: Node.js (Replit)
-- **Backend**: Express.js
-- **Auth**: JWT (jsonwebtoken), Twilio SMS OTP
-- **Database**: Firebase Firestore (project: bridgeup-production, region: us-central1)
-- **Frontend**: Vanilla HTML/CSS/JS (no framework)
-- **Hosting**: Replit (external URL via exposeLocalhost)
-- **Version Control**: GitHub (https://github.com/MikeGira/BridgeUp2.1)
+| Layer | Technology |
+|-------|-----------|
+| Workspace | pnpm monorepo |
+| Frontend | React + TypeScript + Vite + shadcn/ui |
+| Backend | Node.js + Express 4.x (CommonJS) |
+| AI | Anthropic Claude SDK (`@anthropic-ai/sdk`) |
+| SMS/Voice | AfricasTalking (OTP + voice calls) |
+| Auth | JWT (`jsonwebtoken`) + AfricasTalking OTP |
+| Database | Firebase Admin + Firestore |
+| Payments | Stripe + Flutterwave |
+| Other | node-cron, nodemailer, pdfkit, multer |
+| Hosting | Replit (exposeLocalhost required) |
 
-## KEY FILE LOCATIONS
-- Server entry: `artifacts/bridgeup/server/index.js`
-- Firebase config: `artifacts/bridgeup/server/services/firebase.js`
-- Twilio config: `artifacts/bridgeup/server/services/twilio.js`
-- Frontend app: `artifacts/bridgeup/public/js/app.js`
-- Analytics: `artifacts/bridgeup/analytics.html`
+## PROJECT STRUCTURE
+```
+BridgeUp2.1/
+├── package.json                  # pnpm workspace root
+├── pnpm-workspace.yaml
+├── tsconfig.json
+├── artifacts/
+│   ├── bridgeup/
+│   │   ├── server/
+│   │   │   ├── index.js          # Express entry point
+│   │   │   ├── routes/           # auth, needs, helpers, matching,
+│   │   │   │                     # payments, reports, reviews, sms,
+│   │   │   │                     # voice, admin
+│   │   │   └── services/         # claude.js, firebase.js,
+│   │   │                         # scheduler.js, voice-service.js
+│   │   ├── src/                  # React frontend
+│   │   │   ├── App.tsx
+│   │   │   ├── pages/
+│   │   │   ├── components/
+│   │   │   └── hooks/
+│   │   └── vite.config.ts
+│   └── api-server/               # Secondary API server
+└── CLAUDE.md
+```
 
-## ENVIRONMENT VARIABLES REQUIRED
-(Set in Replit Secrets — never commit these)
-- FIREBASE_PROJECT_ID
-- FIREBASE_CLIENT_EMAIL
-- FIREBASE_PRIVATE_KEY
-- TWILIO_ACCOUNT_SID
-- TWILIO_AUTH_TOKEN
-- TWILIO_PHONE_NUMBER
-- JWT_SECRET
+## COMMANDS
+```bash
+pnpm install          # install all workspace deps
+pnpm start            # start backend server
+pnpm run typecheck    # TypeScript type check
+pnpm run build        # build all packages
+
+# Frontend dev server
+cd artifacts/bridgeup && npx vite
+```
+
+## ENVIRONMENT VARIABLES
+(Set in Replit Secrets — never commit)
+
+| Variable | Purpose |
+|----------|---------|
+| `FIREBASE_SERVICE_ACCOUNT` | Full service account JSON (stringified) |
+| `FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket name |
+| `AFRICASTALKING_API_KEY` | AfricasTalking API key |
+| `AFRICASTALKING_USERNAME` | AfricasTalking username |
+| `AFRICASTALKING_SENDER_ID` | SMS sender ID |
+| `ANTHROPIC_API_KEY` | Claude AI API key |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `FLUTTERWAVE_SECRET_KEY` | Flutterwave secret key |
+| `FRONTEND_URL` | Frontend URL for CORS whitelist |
+| `NODE_ENV` | `production` or `development` |
 
 ## KNOWN ISSUES & SOLUTIONS
-1. **Firestore NOT_FOUND**: Use `preferRest: true` in db.settings. Project ID must be 'bridgeup-production'.
-2. **exposeLocalhost**: Must be in .replit or external URL stops serving JS/CSS. Replit support may remove it — always restore.
-3. **OTP flow bug**: After OTP verify, must set `localStorage.setItem('bridgeup_onboarded', '1')` or app loops to onboarding.
-4. **Analytics refresh button**: Use `addEventListener('click', () => loadData())` not `addEventListener('click', loadData)` — the latter passes MouseEvent as the token argument.
 
-## API ENDPOINTS
-- POST /api/auth/send-otp — Send SMS OTP
-- POST /api/auth/verify-otp — Verify OTP, returns JWT
-- GET /api/auth/me — Get current user (requires JWT)
-- POST /api/leads — Public lead capture
-
-## REPLIT CRITICAL CONFIG
+### Firestore NOT_FOUND
+```javascript
+// services/firebase.js — must always have this
+db.settings({ preferRest: true });
 ```
+
+### Frontend not loading CSS/JS from external URL
+`.replit` must always contain — do not remove, Replit support sometimes strips it:
+```toml
 [[ports]]
 localPort = 3000
 externalPort = 80
 exposeLocalhost = true
 ```
-External URL: https://68a98579-e15d-4c7f-8607-639f8c819139-00-3unl4nd6gzjnr.worf.replit.dev
+
+### AfricasTalking OTP not sending
+- Verify `AFRICASTALKING_USERNAME` and `AFRICASTALKING_API_KEY` are in Replit Secrets
+- Sandbox mode only delivers to verified numbers — use live credentials for production
+- Check AfricasTalking dashboard delivery reports for the exact error
+
+### JWT not sent in requests
+Always use `sessionStorage.getItem('bridgeup_token')` — not localStorage.
+
+### Event listener passing MouseEvent as argument
+Wrap all event handlers: `addEventListener('click', () => fn())` not `addEventListener('click', fn)`.
+
+## API ROUTES
+| Method | Route | Auth | Purpose |
+|--------|-------|------|---------|
+| POST | `/api/auth/send-otp` | None | Send OTP via AfricasTalking |
+| POST | `/api/auth/verify-otp` | None | Verify OTP, return JWT |
+| GET | `/api/auth/me` | JWT | Get current user |
+| POST | `/api/needs` | JWT | Post a need |
+| GET | `/api/needs` | JWT | Browse needs |
+| POST | `/api/matching` | JWT | Run matching |
+| GET | `/api/helpers` | JWT | Browse helpers |
+| POST | `/api/payments` | JWT | Create payment |
+| GET | `/api/reports` | Admin | Generate reports |
+| POST | `/api/sms` | Admin | Send SMS notification |
+| POST | `/api/voice` | Admin | Initiate voice call |
 
 ## SECURITY — BRIDGEUP SPECIFIC
-Always load the security skill. BridgeUp-specific requirements:
 
-### Critical Because BridgeUp Handles Vulnerable People
-BridgeUp users may be in crisis (food insecurity, housing instability). A security breach
-could expose them to predators, scammers, or retaliation. Security here is a human safety issue.
+BridgeUp users may be in crisis. A breach could expose someone's location to an abuser or a vulnerable person to a scammer. Security is a human safety issue here, not just technical.
 
 ### Phone Number Protection
-- Phone numbers are PII — never log them in full (`maskPhone()` before any log)
-- Store phone numbers hashed in Firestore for lookup, not plaintext
-- OTP codes: use `crypto.randomInt()`, hash before storing, delete immediately after verification
+- Phone numbers are PII — always use `maskPhone()` before any log output
+- OTP codes: `crypto.randomInt()` only, hash with bcrypt before storing, delete after verification
 - Never expose one user's phone number to another user
 
-### Firestore Rules Must Be Deployed (not in test mode)
+### Firestore Rules (deploy these — never leave in test/open mode)
 ```
-users/{userId} — owner read/write only
-posts/{postId} — authenticated read, owner write/delete
-matches/{matchId} — both matched parties read, server write only
-otps/{phone} — server only (allow read, write: if false)
+users/{userId}     — owner read/write only
+needs/{needId}     — authenticated read, owner write/delete
+matches/{matchId}  — both matched parties read, server write only
+otps/{phone}       — server only (allow read, write: if false)
+payments/{payId}   — server only
 ```
 
-### JWT Configuration for BridgeUp
-- Access token: 15 minutes expiry
-- Refresh token: 7 days, stored in HttpOnly cookie (not localStorage)
-- Rotate refresh tokens on each use
+### JWT Config
+- Access token: 15 min expiry
+- Refresh token: 7 days, HttpOnly cookie (not localStorage)
 
-### Rate Limits for BridgeUp
-- OTP send: 3 per phone number per hour
-- OTP verify: 5 attempts per code, then invalidate
-- API general: 100 requests per 15 minutes per IP
-- Post creation: 10 new posts per day per user
+### Rate Limits
+- OTP send: 3 per phone per hour
+- OTP verify: 5 attempts then invalidate
+- General API: 100 requests / 15 min / IP
 
 ## BEFORE STARTING ANY SESSION
-1. Check the status section above for current progress
-2. Run `tail -20 /tmp/bridgeup.log` to see recent server logs
-3. Run `git log --oneline -5` to see recent commits
+1. Check STATUS section above
+2. `git log --oneline -5` — see what was last completed
+3. `tail -20 /tmp/bridgeup.log` — check server logs
+4. Verify `.replit` still has `exposeLocalhost = true`
