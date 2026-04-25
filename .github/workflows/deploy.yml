@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
 
       - name: Install dependencies
         run: NODE_ENV=development npm install --include=dev
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
 
       - name: Install dependencies
         run: NODE_ENV=development npm install --include=dev

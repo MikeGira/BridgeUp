@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,19 +30,28 @@ const COUNTRIES = [
   { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia',  dial: '+966' },
 ];
 
+function isValidNumber(digits: string, dial: string): boolean {
+  const min = dial === '+1' ? 10 : 6;
+  const max = 15;
+  return digits.length >= min && digits.length <= max;
+}
+
 export default function AuthPhone() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [dialCode, setDialCode] = useState('+250');
   const [number, setNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   const selected = COUNTRIES.find(c => c.dial === dialCode) ?? COUNTRIES[0];
   const digits   = number.replace(/\D/g, '');
   const phone    = dialCode + digits;
-  const ready    = digits.length >= 6;
+  const ready    = isValidNumber(digits, dialCode);
+  const showError = touched && !ready && digits.length > 0;
 
   async function handleSend() {
+    setTouched(true);
     if (!ready || loading) return;
     setLoading(true);
     try {
@@ -60,9 +69,22 @@ export default function AuthPhone() {
     }
   }
 
+  function comingSoon(label: string) {
+    toast({ title: `${label} sign-in coming soon`, description: 'Use your phone number for now.' });
+  }
+
+  const examples: Record<string, string> = {
+    '+250': '788 123 456',
+    '+254': '712 345 678',
+    '+1':   '416 555 0100',
+    '+44':  '7700 900 123',
+    '+33':  '6 12 34 56 78',
+  };
+  const placeholder = examples[dialCode] || '7XX XXX XXX';
+
   return (
     <div className="bu-auth-root">
-      {/* Dark hero (mobile only — hidden on desktop via CSS) */}
+      {/* Hero — visible on mobile, hidden on desktop via CSS */}
       <div className="bu-hero">
         <div className="bu-logo-wrap">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -83,16 +105,18 @@ export default function AuthPhone() {
 
       {/* Card */}
       <div className="bu-card">
-        {/* Desktop-only logo (visible via CSS on sm+) */}
-        <div style={{ textAlign: 'center', marginBottom: 20, display: 'none' }} className="bu-desktop-logo">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginBottom: 8 }}>
-            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#09090b', letterSpacing: -0.5 }}>BridgeUp</div>
+        {/* Desktop logo — shown on sm+ via CSS class */}
+        <div className="bu-desktop-brand">
+          <div className="bu-desktop-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <span className="bu-desktop-name">BridgeUp</span>
         </div>
 
         <h2 className="bu-card-title">Enter your number</h2>
-        <p className="bu-card-sub">We'll send you a 6-digit verification code</p>
+        <p className="bu-card-sub">We'll send a 6-digit verification code via SMS</p>
 
         <div className="bu-input-row">
           <div className="bu-cc-wrap">
@@ -104,7 +128,7 @@ export default function AuthPhone() {
             <select
               className="bu-cc-select"
               value={dialCode}
-              onChange={e => setDialCode(e.target.value)}
+              onChange={e => { setDialCode(e.target.value); setTouched(false); setNumber(''); }}
               aria-label="Select country code"
             >
               {COUNTRIES.map(c => (
@@ -118,20 +142,29 @@ export default function AuthPhone() {
           <input
             type="tel"
             inputMode="numeric"
-            placeholder="Phone number"
+            placeholder={placeholder}
             value={number}
-            onChange={e => setNumber(e.target.value.replace(/[^\d\s\-]/g, ''))}
+            onChange={e => { setNumber(e.target.value.replace(/[^\d\s\-]/g, '')); setTouched(false); }}
+            onBlur={() => setTouched(true)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            className="bu-phone-input"
+            className={`bu-phone-input${showError ? ' bu-phone-input-error' : ''}`}
             autoFocus
             autoComplete="tel-local"
             name="phone"
+            aria-invalid={showError}
           />
         </div>
 
-        <p className="bu-hint">
-          Example: {dialCode === '+1' ? '416 555 0100' : dialCode === '+250' ? '788 123 456' : '7XX XXX XXX'}
-        </p>
+        {showError && (
+          <p className="bu-field-error">
+            Please enter a valid phone number for {selected.name} ({dialCode}).
+          </p>
+        )}
+        {!showError && (
+          <p className="bu-hint">
+            Example for {selected.name}: {dialCode} {placeholder}
+          </p>
+        )}
 
         <button
           className={`bu-btn${ready ? ' bu-btn-active' : ''}`}
@@ -143,10 +176,10 @@ export default function AuthPhone() {
             : <>Continue &nbsp;→</>}
         </button>
 
-        {/* Social sign-in (desktop decorative — real integration needs OAuth setup) */}
-        <div className="bu-divider">or continue with</div>
+        <div className="bu-divider">or sign in with</div>
+
         <div className="bu-social-btns">
-          <button type="button" className="bu-social-btn" onClick={() => toast({ title: 'Coming soon', description: 'Google sign-in will be available soon.' })}>
+          <button type="button" className="bu-social-btn" onClick={() => comingSoon('Google')}>
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -155,11 +188,15 @@ export default function AuthPhone() {
             </svg>
             Continue with Google
           </button>
-          <button type="button" className="bu-social-btn" onClick={() => toast({ title: 'Coming soon', description: 'Apple sign-in will be available soon.' })}>
+          <button type="button" className="bu-social-btn" onClick={() => comingSoon('Apple')}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.32.07 2.22.79 3.02.8.77.01 2.18-.82 3.74-.7 1.28.1 2.35.58 3.19 1.49-2.86 1.7-2.44 5.72.01 7.06-.5 1.45-1.22 2.88-1.96 4.23zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
             </svg>
             Continue with Apple
+          </button>
+          <button type="button" className="bu-social-btn" onClick={() => comingSoon('Email')}>
+            <Mail size={20} />
+            Continue with Email
           </button>
         </div>
 
