@@ -19,7 +19,11 @@ function getClient() {
   return _client;
 }
 
-// Proxy: lazily initialises on first method call — never throws at module load time
+// Proxy: lazily initialises on first call; binds methods so 'this' is correct
 module.exports = new Proxy({}, {
-  get(_, prop) { return getClient()[prop]; },
+  get(_, prop) {
+    const client = getClient();
+    const val = client[prop];
+    return typeof val === 'function' ? val.bind(client) : val;
+  },
 });

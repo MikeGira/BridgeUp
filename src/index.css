@@ -310,14 +310,17 @@
 /* ─── Leaflet map overrides ───────────────────────────────────────────────── */
 .leaflet-container {
   font-family: var(--font-sans);
-  background: #1a1a2e;
+  background: #e8e0d8;
 }
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  font-family: var(--font-sans);
 }
-.leaflet-tile-pane {
-  filter: brightness(0.9);
+.leaflet-popup-tip { background: #fff; }
+.leaflet-control-zoom a {
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 
 /* ─── Safe area helpers ───────────────────────────────────────────────────── */
@@ -604,3 +607,104 @@ button, a { -webkit-tap-highlight-color: transparent; }
   font-weight: 500;
 }
 .bu-link:hover { text-decoration: underline; }
+
+/* ============================================================
+   Auth screen responsive — desktop vs mobile
+   ============================================================ */
+
+/* On desktop: center the card vertically, remove the dark hero */
+@media (min-width: 640px) {
+  .bu-auth-root {
+    background: #f9fafb;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .bu-hero {
+    display: none; /* hidden on desktop */
+  }
+  .bu-card {
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+    padding: 40px 40px 40px;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 420px;
+  }
+  .bu-card-title { font-size: 24px; }
+
+  /* Desktop: show logo + tagline above the card */
+  .bu-auth-root::before {
+    content: "";
+    display: none;
+  }
+}
+
+/* Desktop sign-in alternatives (Google, Apple, Email) */
+.bu-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 500;
+}
+.bu-divider::before, .bu-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e4e4e7;
+}
+
+.bu-social-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.bu-social-btn {
+  width: 100%;
+  height: 48px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #09090b;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
+}
+.bu-social-btn:hover { background: #f9f9f9; border-color: #d1d1d6; }
+.bu-social-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* OTP input fixes */
+.bu-otp-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #09090b;
+}
+@media (min-width: 640px) {
+  .bu-otp-root {
+    background: #f9fafb;
+    align-items: center;
+    justify-content: center;
+  }
+  .bu-otp-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+  }
+}

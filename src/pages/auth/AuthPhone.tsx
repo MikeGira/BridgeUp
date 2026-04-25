@@ -5,56 +5,29 @@ import { authApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 const COUNTRIES = [
-  // Africa — primary market
-  { code: 'RW', flag: '🇷🇼', name: 'Rwanda',           dial: '+250' },
-  { code: 'KE', flag: '🇰🇪', name: 'Kenya',            dial: '+254' },
-  { code: 'UG', flag: '🇺🇬', name: 'Uganda',           dial: '+256' },
-  { code: 'TZ', flag: '🇹🇿', name: 'Tanzania',         dial: '+255' },
-  { code: 'NG', flag: '🇳🇬', name: 'Nigeria',          dial: '+234' },
-  { code: 'GH', flag: '🇬🇭', name: 'Ghana',            dial: '+233' },
-  { code: 'ZA', flag: '🇿🇦', name: 'South Africa',     dial: '+27'  },
-  { code: 'ET', flag: '🇪🇹', name: 'Ethiopia',         dial: '+251' },
-  { code: 'CM', flag: '🇨🇲', name: 'Cameroon',         dial: '+237' },
-  { code: 'SN', flag: '🇸🇳', name: 'Senegal',          dial: '+221' },
-  { code: 'CI', flag: '🇨🇮', name: "Côte d'Ivoire",    dial: '+225' },
-  { code: 'TG', flag: '🇹🇬', name: 'Togo',             dial: '+228' },
-  { code: 'BF', flag: '🇧🇫', name: 'Burkina Faso',     dial: '+226' },
-  { code: 'ML', flag: '🇲🇱', name: 'Mali',             dial: '+223' },
-  { code: 'NE', flag: '🇳🇪', name: 'Niger',            dial: '+227' },
-  { code: 'TD', flag: '🇹🇩', name: 'Chad',             dial: '+235' },
-  { code: 'CD', flag: '🇨🇩', name: 'DR Congo',         dial: '+243' },
-  { code: 'MZ', flag: '🇲🇿', name: 'Mozambique',       dial: '+258' },
-  { code: 'ZM', flag: '🇿🇲', name: 'Zambia',           dial: '+260' },
-  { code: 'ZW', flag: '🇿🇼', name: 'Zimbabwe',         dial: '+263' },
-  { code: 'BW', flag: '🇧🇼', name: 'Botswana',         dial: '+267' },
-  { code: 'MU', flag: '🇲🇺', name: 'Mauritius',        dial: '+230' },
-  { code: 'MA', flag: '🇲🇦', name: 'Morocco',          dial: '+212' },
-  { code: 'DZ', flag: '🇩🇿', name: 'Algeria',          dial: '+213' },
-  { code: 'TN', flag: '🇹🇳', name: 'Tunisia',          dial: '+216' },
-  { code: 'EG', flag: '🇪🇬', name: 'Egypt',            dial: '+20'  },
-  { code: 'SO', flag: '🇸🇴', name: 'Somalia',          dial: '+252' },
-  { code: 'SS', flag: '🇸🇸', name: 'South Sudan',      dial: '+211' },
-  // North America
-  { code: 'CA', flag: '🇨🇦', name: 'Canada',           dial: '+1'   },
-  { code: 'US', flag: '🇺🇸', name: 'United States',    dial: '+1'   },
-  { code: 'MX', flag: '🇲🇽', name: 'Mexico',           dial: '+52'  },
-  // Europe
-  { code: 'GB', flag: '🇬🇧', name: 'United Kingdom',   dial: '+44'  },
-  { code: 'FR', flag: '🇫🇷', name: 'France',           dial: '+33'  },
-  { code: 'DE', flag: '🇩🇪', name: 'Germany',          dial: '+49'  },
-  { code: 'BE', flag: '🇧🇪', name: 'Belgium',          dial: '+32'  },
-  { code: 'NL', flag: '🇳🇱', name: 'Netherlands',      dial: '+31'  },
-  { code: 'CH', flag: '🇨🇭', name: 'Switzerland',      dial: '+41'  },
-  { code: 'IT', flag: '🇮🇹', name: 'Italy',            dial: '+39'  },
-  { code: 'ES', flag: '🇪🇸', name: 'Spain',            dial: '+34'  },
-  { code: 'PT', flag: '🇵🇹', name: 'Portugal',         dial: '+351' },
-  // Asia & Oceania
-  { code: 'IN', flag: '🇮🇳', name: 'India',            dial: '+91'  },
-  { code: 'AU', flag: '🇦🇺', name: 'Australia',        dial: '+61'  },
-  { code: 'CN', flag: '🇨🇳', name: 'China',            dial: '+86'  },
-  { code: 'JP', flag: '🇯🇵', name: 'Japan',            dial: '+81'  },
-  { code: 'AE', flag: '🇦🇪', name: 'UAE',              dial: '+971' },
-  { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia',     dial: '+966' },
+  { code: 'RW', flag: '🇷🇼', name: 'Rwanda',        dial: '+250' },
+  { code: 'KE', flag: '🇰🇪', name: 'Kenya',         dial: '+254' },
+  { code: 'UG', flag: '🇺🇬', name: 'Uganda',        dial: '+256' },
+  { code: 'TZ', flag: '🇹🇿', name: 'Tanzania',      dial: '+255' },
+  { code: 'NG', flag: '🇳🇬', name: 'Nigeria',       dial: '+234' },
+  { code: 'GH', flag: '🇬🇭', name: 'Ghana',         dial: '+233' },
+  { code: 'ZA', flag: '🇿🇦', name: 'South Africa',  dial: '+27'  },
+  { code: 'ET', flag: '🇪🇹', name: 'Ethiopia',      dial: '+251' },
+  { code: 'CM', flag: '🇨🇲', name: 'Cameroon',      dial: '+237' },
+  { code: 'SN', flag: '🇸🇳', name: 'Senegal',       dial: '+221' },
+  { code: 'CD', flag: '🇨🇩', name: 'DR Congo',      dial: '+243' },
+  { code: 'MA', flag: '🇲🇦', name: 'Morocco',       dial: '+212' },
+  { code: 'EG', flag: '🇪🇬', name: 'Egypt',         dial: '+20'  },
+  { code: 'CA', flag: '🇨🇦', name: 'Canada',        dial: '+1'   },
+  { code: 'US', flag: '🇺🇸', name: 'United States', dial: '+1'   },
+  { code: 'GB', flag: '🇬🇧', name: 'United Kingdom',dial: '+44'  },
+  { code: 'FR', flag: '🇫🇷', name: 'France',        dial: '+33'  },
+  { code: 'DE', flag: '🇩🇪', name: 'Germany',       dial: '+49'  },
+  { code: 'BE', flag: '🇧🇪', name: 'Belgium',       dial: '+32'  },
+  { code: 'AU', flag: '🇦🇺', name: 'Australia',     dial: '+61'  },
+  { code: 'IN', flag: '🇮🇳', name: 'India',         dial: '+91'  },
+  { code: 'AE', flag: '🇦🇪', name: 'UAE',           dial: '+971' },
+  { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia',  dial: '+966' },
 ];
 
 export default function AuthPhone() {
@@ -65,9 +38,9 @@ export default function AuthPhone() {
   const [loading, setLoading] = useState(false);
 
   const selected = COUNTRIES.find(c => c.dial === dialCode) ?? COUNTRIES[0];
-  const digits = number.replace(/\D/g, '');
-  const phone = dialCode + digits;
-  const ready = digits.length >= 6;
+  const digits   = number.replace(/\D/g, '');
+  const phone    = dialCode + digits;
+  const ready    = digits.length >= 6;
 
   async function handleSend() {
     if (!ready || loading) return;
@@ -89,6 +62,7 @@ export default function AuthPhone() {
 
   return (
     <div className="bu-auth-root">
+      {/* Dark hero (mobile only — hidden on desktop via CSS) */}
       <div className="bu-hero">
         <div className="bu-logo-wrap">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -98,7 +72,7 @@ export default function AuthPhone() {
         <h1 className="bu-title">BridgeUp</h1>
         <p className="bu-subtitle">Connect with help in your community —<br />food, shelter, jobs, medical care and more.</p>
         <div className="bu-stats">
-          {[{ n: '2,400+', l: 'People helped' }, { n: '12', l: 'Cities' }, { n: '800+', l: 'Helpers' }].map(s => (
+          {[{ n: '2,400+', l: 'Helped' }, { n: '12', l: 'Cities' }, { n: '800+', l: 'Helpers' }].map(s => (
             <div key={s.l} className="bu-stat">
               <span className="bu-stat-n">{s.n}</span>
               <span className="bu-stat-l">{s.l}</span>
@@ -107,9 +81,18 @@ export default function AuthPhone() {
         </div>
       </div>
 
+      {/* Card */}
       <div className="bu-card">
+        {/* Desktop-only logo (visible via CSS on sm+) */}
+        <div style={{ textAlign: 'center', marginBottom: 20, display: 'none' }} className="bu-desktop-logo">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', marginBottom: 8 }}>
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#09090b', letterSpacing: -0.5 }}>BridgeUp</div>
+        </div>
+
         <h2 className="bu-card-title">Enter your number</h2>
-        <p className="bu-card-sub">We'll send a 6-digit verification code via SMS</p>
+        <p className="bu-card-sub">We'll send you a 6-digit verification code</p>
 
         <div className="bu-input-row">
           <div className="bu-cc-wrap">
@@ -160,12 +143,30 @@ export default function AuthPhone() {
             : <>Continue &nbsp;→</>}
         </button>
 
+        {/* Social sign-in (desktop decorative — real integration needs OAuth setup) */}
+        <div className="bu-divider">or continue with</div>
+        <div className="bu-social-btns">
+          <button type="button" className="bu-social-btn" onClick={() => toast({ title: 'Coming soon', description: 'Google sign-in will be available soon.' })}>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+          <button type="button" className="bu-social-btn" onClick={() => toast({ title: 'Coming soon', description: 'Apple sign-in will be available soon.' })}>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.32.07 2.22.79 3.02.8.77.01 2.18-.82 3.74-.7 1.28.1 2.35.58 3.19 1.49-2.86 1.7-2.44 5.72.01 7.06-.5 1.45-1.22 2.88-1.96 4.23zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+            </svg>
+            Continue with Apple
+          </button>
+        </div>
+
         <p className="bu-legal">
           By continuing you agree to our&nbsp;
-          <a href="#" className="bu-link">Terms</a>
-          &nbsp;&amp;&nbsp;
+          <a href="#" className="bu-link">Terms</a>&nbsp;&amp;&nbsp;
           <a href="#" className="bu-link">Privacy Policy</a>.
-          Standard SMS rates may apply.
         </p>
       </div>
     </div>
