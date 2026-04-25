@@ -351,32 +351,26 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 /* ============================================================
-   BridgeUp — Auth screen (Uber-inspired dark hero + white card)
+   BridgeUp — Auth screen (Uber-style: single clean white page)
+   Same layout on mobile and desktop — no dark hero
    ============================================================ */
 .bu-auth-root {
-  height: 100dvh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #09090b;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f6;
+  padding: 24px 16px;
+  overflow-y: auto;
   font-family: var(--app-font-sans, 'Inter', system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark hero — capped so the card always has enough room */
+/* Dark hero — hidden on all screen sizes */
 .bu-hero {
-  flex: 0 0 auto;
-  min-height: 200px;
-  max-height: 46vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 28px 32px;
-  text-align: center;
-  background: linear-gradient(160deg, #0f172a 0%, #09090b 100%);
+  display: none;
 }
 
 .bu-logo-wrap {
@@ -444,19 +438,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
   letter-spacing: 0.5px;
 }
 
-/* White card — flex-grow fills remaining space, scrolls if content tall */
+/* White card — same on mobile and desktop */
 .bu-card {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   background: #ffffff;
-  border-radius: 28px 28px 0 0;
-  padding: 28px 24px max(36px, env(safe-area-inset-bottom, 36px));
-  box-shadow: 0 -4px 40px rgba(0,0,0,0.25);
-  max-width: 480px;
+  border-radius: 20px;
+  padding: 36px 28px 36px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
   width: 100%;
-  margin: 0 auto;
+  max-width: 420px;
   box-sizing: border-box;
 }
 
@@ -632,36 +621,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .bu-link:hover { text-decoration: underline; }
 
 /* ============================================================
-   Auth screen responsive — desktop vs mobile
+   Auth screen — desktop tweaks only (base styles handle mobile)
    ============================================================ */
-
-/* On desktop: center the card vertically, remove the dark hero */
 @media (min-width: 640px) {
-  .bu-auth-root {
-    background: #f9fafb;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-  .bu-hero {
-    display: none; /* hidden on desktop */
-  }
-  .bu-card {
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.10);
-    padding: 40px 40px 40px;
-    margin: 0 auto;
-    width: 100%;
-    max-width: 420px;
-  }
   .bu-card-title { font-size: 24px; }
-
-  /* Desktop: show logo + tagline above the card */
-  .bu-auth-root::before {
-    content: "";
-    display: none;
-  }
 }
 
 /* Desktop sign-in alternatives (Google, Apple, Email) */
@@ -732,28 +695,28 @@ button, a { -webkit-tap-highlight-color: transparent; }
   }
 }
 
-/* ─── Desktop brand block (shown above card on sm+) ─────────────────────── */
+/* ─── Brand block — always visible on all screen sizes ──────────────────── */
 .bu-desktop-brand {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 10px;
   justify-content: center;
   margin-bottom: 24px;
 }
 .bu-desktop-icon {
-  width: 40px; height: 40px;
-  border-radius: 12px;
+  width: 44px; height: 44px;
+  border-radius: 14px;
   background: linear-gradient(135deg,#2563eb,#1d4ed8);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 16px rgba(37,99,235,0.35);
   flex-shrink: 0;
 }
 .bu-desktop-name {
-  font-size: 22px; font-weight: 800; color: #09090b; letter-spacing: -0.5px;
+  font-size: 24px; font-weight: 800; color: #09090b; letter-spacing: -0.5px;
   font-family: var(--app-font-sans,'Inter',system-ui,sans-serif);
 }
 @media (min-width: 640px) {
-  .bu-desktop-brand { display: flex; }
+  .bu-card { padding: 40px 40px 40px; }
   .bu-card-title { font-size: 20px; margin-bottom: 2px; }
 }
 
