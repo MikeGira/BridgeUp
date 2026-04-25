@@ -34,21 +34,32 @@ export default function NeedDetail() {
   return (
     <AppShell hideNav>
       <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="flex items-center gap-3 px-4 pt-12 pb-4">
+        <div className="bu-page">
+        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
           <button type="button" onClick={() => navigate('/needs')} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold flex-1">Request Details</h1>
+          <h1 className="text-xl font-bold flex-1 text-gray-900">Request Details</h1>
         </div>
 
         {isLoading && (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center py-20">
             <Loader className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
 
+        {!isLoading && !need && (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-5">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+              <HelpCircle className="w-7 h-7 text-gray-400" />
+            </div>
+            <p className="font-semibold text-gray-900 mb-1">Request not found</p>
+            <p className="text-sm text-gray-500">This request may have been removed or is still loading.</p>
+          </div>
+        )}
+
         {!isLoading && need && (
-          <div className="px-4 pb-8 space-y-5">
+          <div className="px-5 pb-8 space-y-4">
             {/* Status card — Uber-style */}
             <div className="p-5 bg-card rounded-2xl border border-border shadow-sm">
               <div className="flex items-center gap-3 mb-5">
@@ -131,6 +142,7 @@ export default function NeedDetail() {
             )}
           </div>
         )}
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

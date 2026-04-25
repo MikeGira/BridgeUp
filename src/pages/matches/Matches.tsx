@@ -64,14 +64,15 @@ export default function Matches() {
   return (
     <AppShell>
       <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="px-4 pt-12 pb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Matches</h1>
+        <div className="bu-page">
+        <div className="px-5 pt-12 pb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Matches</h1>
           <button type="button" onClick={() => void refetch()} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted">
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
-        <div className="px-4 pb-8 space-y-5">
+        <div className="px-5 pb-8 space-y-5">
           {isLoading && (
             <div className="flex items-center justify-center py-16">
               <Loader className="w-8 h-8 animate-spin text-primary" />
@@ -112,6 +113,7 @@ export default function Matches() {
             </section>
           )}
         </div>
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

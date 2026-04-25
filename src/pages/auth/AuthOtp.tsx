@@ -99,7 +99,8 @@ export default function AuthOtp() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex items-center px-4 pt-12 pb-4">
+      <div className="bu-page flex flex-col flex-1">
+      <div className="flex items-center px-5 pt-12 pb-4">
         <button
           type="button"
           onClick={() => navigate('/login')}
@@ -109,7 +110,7 @@ export default function AuthOtp() {
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col px-6 pt-4">
+      <div className="flex-1 flex flex-col px-6 pt-2">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Verify your number</h1>
           <p className="text-muted-foreground">
@@ -165,14 +166,15 @@ export default function AuthOtp() {
 
         {/* Manual submit */}
         {!loading && !verified && (
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-semibold rounded-xl mb-4"
+          <button
+            type="button"
+            className="w-full h-14 text-[15px] font-bold rounded-2xl mb-4 text-white transition-all active:scale-[0.98] disabled:opacity-40"
+            style={{ background: '#000000' }}
             onClick={() => verifyCode(digits.join(''))}
             disabled={digits.filter(Boolean).length !== OTP_LENGTH}
           >
             Verify
-          </Button>
+          </button>
         )}
 
         {/* Resend */}
@@ -191,6 +193,7 @@ export default function AuthOtp() {
           Codes expire in 5 minutes.
         </p>
       </div>
+      </div>{/* bu-page */}
     </div>
   );
 }

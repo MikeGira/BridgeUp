@@ -58,11 +58,12 @@ export default function Profile() {
   return (
     <AppShell>
       <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="flex items-center gap-3 px-4 pt-12 pb-4">
+        <div className="bu-page">
+        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
           <button type="button" onClick={() => navigate('/home')} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold flex-1">Profile</h1>
+          <h1 className="text-xl font-bold flex-1 text-gray-900">Profile</h1>
           <button
             type="button"
             onClick={() => setEditing((e) => !e)}
@@ -72,7 +73,7 @@ export default function Profile() {
           </button>
         </div>
 
-        <div className="px-4 pb-8 space-y-5">
+        <div className="px-5 pb-8 space-y-4">
           {/* Avatar + name */}
           <div className="flex items-center gap-4 p-5 bg-card rounded-2xl border border-border">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
@@ -185,6 +186,7 @@ export default function Profile() {
             </Button>
           )}
         </div>
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

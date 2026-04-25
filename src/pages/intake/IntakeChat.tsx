@@ -62,9 +62,10 @@ export default function IntakeChat() {
 
   return (
     <AppShell hideNav>
-      <div className="flex flex-col h-full bg-background">
+      <div className="flex flex-col h-full bg-background overflow-x-hidden">
+        <div className="bu-page flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 pt-12 pb-3 border-b border-border">
+        <div className="flex items-center gap-3 px-5 pt-12 pb-3 border-b border-border flex-shrink-0">
           <button
             type="button"
             onClick={() => navigate('/post-need')}
@@ -90,7 +91,7 @@ export default function IntakeChat() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${msg.role === 'assistant' ? 'bg-primary/10' : 'bg-muted'}`}>
@@ -145,7 +146,7 @@ export default function IntakeChat() {
 
         {/* Input */}
         {!done && (
-          <div className="px-4 pb-8 pt-3 border-t border-border">
+          <div className="px-5 pb-8 pt-3 border-t border-border flex-shrink-0">
             <div className="flex gap-2 items-end">
               <textarea
                 ref={inputRef}
@@ -176,6 +177,7 @@ export default function IntakeChat() {
             </p>
           </div>
         )}
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

@@ -22,9 +22,10 @@ export default function MyNeeds() {
   return (
     <AppShell>
       <div className="flex flex-col h-full bg-background overflow-y-auto">
+        <div className="bu-page">
         {/* Header */}
-        <div className="px-4 pt-12 pb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">My Requests</h1>
+        <div className="px-5 pt-12 pb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">My Requests</h1>
           <div className="flex gap-2">
             <button type="button" onClick={() => void refetch()} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted">
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -35,7 +36,7 @@ export default function MyNeeds() {
           </div>
         </div>
 
-        <div className="px-4 pb-8 space-y-6">
+        <div className="px-5 pb-8 space-y-6">
           {isLoading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -85,6 +86,7 @@ export default function MyNeeds() {
             </section>
           )}
         </div>
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

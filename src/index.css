@@ -327,6 +327,15 @@
 .safe-area-top    { padding-top: env(safe-area-inset-top,    0); }
 .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
 
+/* ─── Desktop page centering ─────────────────────────────────────────────── */
+/* Wrap inner page content in .bu-page to center on wide screens */
+.bu-page {
+  width: 100%;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ─── Smooth scroll ───────────────────────────────────────────────────────── */
 * { scroll-behavior: smooth; }
 
