@@ -2,16 +2,25 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-  console.error('[Supabase] FATAL: SUPABASE_URL and SUPABASE_SERVICE_KEY must be set.');
-  process.exit(1);
+let _supabase = null;
+
+function getSupabase() {
+  if (_supabase) return _supabase;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    throw Object.assign(new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are not set. Add them in your Vercel project settings.'), { status: 503 });
+  }
+  _supabase = createClient(process.env.SUPABASE_URL.trim(), process.env.SUPABASE_SERVICE_KEY.trim(), {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _supabase;
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+// Proxy that lazily initialises the client on first use
+const supabase = new Proxy({}, {
+  get(_target, prop) {
+    return getSupabase()[prop];
+  },
+});
 
 const TABLES = {
   USERS:             'users',

@@ -8,12 +8,13 @@ const { sendOTP, verifyOTP, countryCodeFromPhone } = require('../services/twilio
 
 const router = express.Router();
 
-if (!process.env.SESSION_SECRET) {
-  console.error('[Auth] FATAL: SESSION_SECRET is not set.');
-  process.exit(1);
+function getJwtSecret() {
+  const s = process.env.SESSION_SECRET;
+  if (!s) throw Object.assign(new Error('SESSION_SECRET is not set in Vercel environment variables.'), { status: 503 });
+  return s;
 }
 
-const JWT_SECRET      = process.env.SESSION_SECRET;
+const JWT_SECRET      = process.env.SESSION_SECRET || 'pending-vercel-env-var';
 const JWT_EXPIRY      = '7d';
 const OTP_SEND_MAX    = 3;
 const OTP_SEND_WINDOW = 60 * 60 * 1000;

@@ -347,7 +347,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
   display: flex;
   flex-direction: column;
   background: #09090b;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--app-font-sans, 'Inter', system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Dark hero */
@@ -575,3 +577,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
   line-height: 1.6;
   margin: 0;
 }
+
+.bu-hint {
+  font-size: 12px;
+  color: #a1a1aa;
+  margin: -8px 0 12px;
+  padding-left: 2px;
+}
+
+.bu-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+.bu-link:hover { text-decoration: underline; }

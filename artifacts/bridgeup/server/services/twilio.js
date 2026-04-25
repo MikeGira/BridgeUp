@@ -4,15 +4,15 @@ const twilio = require('twilio');
 const { supabase, TABLES } = require('./supabase');
 const { processNeed, detectLanguage } = require('./claude');
 
-const REQUIRED_VARS = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
-for (const v of REQUIRED_VARS) {
-  if (!process.env[v]) {
-    console.error(`[Twilio] FATAL: ${v} environment variable is not set.`);
-    process.exit(1);
+let _twilioClient = null;
+function getTwilio() {
+  if (_twilioClient) return _twilioClient;
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    throw Object.assign(new Error('Twilio credentials not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Vercel environment variables.'), { status: 503 });
   }
+  _twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID.trim(), process.env.TWILIO_AUTH_TOKEN.trim());
+  return _twilioClient;
 }
-
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const PHONE_NUMBERS = {
   RW: process.env.TWILIO_RWANDA_NUMBER,
@@ -67,7 +67,7 @@ const SMS_STEPS = {
 async function sendSMS(to, body, from) {
   const fromNumber = from || pickFromNumber(to);
   if (!fromNumber) throw new Error(`[Twilio] No outbound phone number configured for destination ${to}.`);
-  const message = await twilioClient.messages.create({ to, from: fromNumber, body });
+  const message = await getTwilio().messages.create({ to, from: fromNumber, body });
   console.log(`[Twilio] SMS sent to ***${String(to).slice(-4)} | SID: ${message.sid}`);
   return { sid: message.sid, status: message.status };
 }
