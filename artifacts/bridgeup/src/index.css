@@ -433,60 +433,69 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .bu-card {
   background: #ffffff;
   border-radius: 28px 28px 0 0;
-  padding: 32px 24px max(32px, env(safe-area-inset-bottom, 32px));
+  padding: 32px 24px max(36px, env(safe-area-inset-bottom, 36px));
   box-shadow: 0 -4px 40px rgba(0,0,0,0.25);
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .bu-card-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #09090b;
-  margin: 0 0 6px;
-  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+  letter-spacing: -0.4px;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
 }
 
 .bu-card-sub {
   font-size: 14px;
   color: #71717a;
-  margin: 0 0 24px;
+  margin: 0 0 20px;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
 }
 
 /* Input row */
 .bu-input-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
 /* Country code */
 .bu-cc-wrap {
   position: relative;
   flex-shrink: 0;
+  width: 100px;
 }
 
 .bu-cc-display {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  height: 56px;
+  gap: 5px;
+  padding: 0 12px;
+  height: 52px;
   background: #f4f4f5;
   border: 1.5px solid #e4e4e7;
-  border-radius: 14px;
+  border-radius: 12px;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
 }
 
-.bu-cc-flag { font-size: 22px; line-height: 1; }
+.bu-cc-flag { font-size: 20px; line-height: 1; }
 
 .bu-cc-code {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #09090b;
 }
 
-/* Invisible native select — sits on top of display div, opens native picker */
+/* Invisible native select — overlays display div, opens OS picker on tap */
 .bu-cc-select {
   position: absolute;
   inset: 0;
@@ -495,23 +504,26 @@ button, a { -webkit-tap-highlight-color: transparent; }
   opacity: 0;
   cursor: pointer;
   z-index: 2;
-  font-size: 16px; /* prevents iOS zoom */
+  font-size: 16px; /* prevents iOS auto-zoom */
 }
 
 /* Phone number input */
 .bu-phone-input {
   flex: 1;
-  height: 56px;
-  padding: 0 16px;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
   font-size: 16px;
   font-weight: 500;
   color: #09090b;
   background: #f4f4f5;
   border: 1.5px solid #e4e4e7;
-  border-radius: 14px;
+  border-radius: 12px;
   outline: none;
   transition: border-color 0.15s;
   -webkit-appearance: none;
+  box-sizing: border-box;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
 }
 
 .bu-phone-input:focus {
@@ -524,22 +536,23 @@ button, a { -webkit-tap-highlight-color: transparent; }
 /* CTA button */
 .bu-btn {
   width: 100%;
-  height: 56px;
+  height: 52px;
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #e4e4e7;
   color: #a1a1aa;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: not-allowed;
-  transition: background 0.2s, color 0.2s, transform 0.1s;
-  margin-bottom: 16px;
-  font-family: inherit;
-  letter-spacing: -0.2px;
+  transition: background 0.18s, color 0.18s, transform 0.1s;
+  margin-bottom: 14px;
+  font-family: var(--app-font-sans, 'Inter', system-ui, sans-serif);
+  letter-spacing: -0.1px;
+  box-sizing: border-box;
 }
 
 .bu-btn.bu-btn-active {

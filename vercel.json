@@ -10,6 +10,7 @@
     }
   },
   "rewrites": [
+    { "source": "/api/ping",        "destination": "/api/ping.js"   },
     { "source": "/api/:path*",      "destination": "/api/server.js" },
     { "source": "/voice/:path*",    "destination": "/api/server.js" },
     { "source": "/sms/:path*",      "destination": "/api/server.js" },
