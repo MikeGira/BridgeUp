@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Loader2, Mail } from 'lucide-react';
 import { authApi } from '@/lib/api';
@@ -30,33 +30,86 @@ const COUNTRIES = [
   { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia',  dial: '+966' },
 ];
 
-function isValidNumber(digits: string, dial: string): boolean {
+function isValidMobileNumber(digits: string, dial: string): boolean {
   const min = dial === '+1' ? 10 : 6;
-  const max = 15;
-  return digits.length >= min && digits.length <= max;
+  return digits.length >= min && digits.length <= 15;
 }
+
+// ─── Desktop input helpers ─────────────────────────────────────────────────
+
+function isEmailInput(val: string): boolean {
+  return val.includes('@');
+}
+
+function parseDesktopPhone(val: string): string {
+  const stripped = val.trim().replace(/[\s\-\(\)\.]/g, '');
+  if (stripped.startsWith('+')) return stripped;
+  // bare digits ≥10: assume North American +1
+  if (/^\d{10,11}$/.test(stripped)) return '+1' + stripped.slice(-10);
+  return '';
+}
+
+function isValidDesktopInput(val: string): boolean {
+  if (isEmailInput(val)) {
+    return val.includes('.') && val.indexOf('@') > 0 && val.length > 5;
+  }
+  const phone = parseDesktopPhone(val);
+  const digits = phone.replace(/\D/g, '');
+  return phone.startsWith('+') && digits.length >= 8 && digits.length <= 15;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+
+const MOBILE_EXAMPLES: Record<string, string> = {
+  '+250': '788 123 456',
+  '+254': '712 345 678',
+  '+1':   '416 555 0100',
+  '+44':  '7700 900 123',
+  '+33':  '6 12 34 56 78',
+};
 
 export default function AuthPhone() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+
+  // ── Viewport ──────────────────────────────────────────────────────────────
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 640
+  );
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 640);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  // ── Mobile state ──────────────────────────────────────────────────────────
   const [dialCode, setDialCode] = useState('+250');
-  const [number, setNumber] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileTouched, setMobileTouched] = useState(false);
+
+  const selectedCountry = COUNTRIES.find((c) => c.dial === dialCode) ?? COUNTRIES[0];
+  const mobileDigits = mobileNumber.replace(/\D/g, '');
+  const mobilePhone  = dialCode + mobileDigits;
+  const mobileReady  = isValidMobileNumber(mobileDigits, dialCode);
+  const mobileShowError = mobileTouched && !mobileReady && mobileDigits.length > 0;
+  const mobilePlaceholder = MOBILE_EXAMPLES[dialCode] || '7XX XXX XXX';
+
+  // ── Desktop state ─────────────────────────────────────────────────────────
+  const [desktopInput, setDesktopInput] = useState('');
+  const [desktopTouched, setDesktopTouched] = useState(false);
+
+  const desktopIsEmail = isEmailInput(desktopInput);
+  const desktopReady   = desktopInput.length > 0 && isValidDesktopInput(desktopInput);
+  const desktopShowError = desktopTouched && desktopInput.length > 0 && !desktopReady && !desktopIsEmail;
+
+  // ── Shared ────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
-  const [touched, setTouched] = useState(false);
 
-  const selected = COUNTRIES.find(c => c.dial === dialCode) ?? COUNTRIES[0];
-  const digits   = number.replace(/\D/g, '');
-  const phone    = dialCode + digits;
-  const ready    = isValidNumber(digits, dialCode);
-  const showError = touched && !ready && digits.length > 0;
-
-  async function handleSend() {
-    setTouched(true);
-    if (!ready || loading) return;
+  async function sendOtp(fullPhone: string) {
     setLoading(true);
     try {
-      await authApi.sendOtp(phone);
-      sessionStorage.setItem('bridgeup_verify_phone', phone);
+      await authApi.sendOtp(fullPhone);
+      sessionStorage.setItem('bridgeup_verify_phone', fullPhone);
       navigate('/verify');
     } catch (err: unknown) {
       toast({
@@ -69,22 +122,36 @@ export default function AuthPhone() {
     }
   }
 
+  async function handleMobileSend() {
+    setMobileTouched(true);
+    if (!mobileReady || loading) return;
+    await sendOtp(mobilePhone);
+  }
+
+  async function handleDesktopSend() {
+    setDesktopTouched(true);
+    if (loading) return;
+    if (desktopIsEmail) {
+      toast({ title: 'Email sign-in coming soon', description: 'Use your phone number for now.' });
+      return;
+    }
+    if (!desktopReady) return;
+    await sendOtp(parseDesktopPhone(desktopInput));
+  }
+
   function comingSoon(label: string) {
     toast({ title: `${label} sign-in coming soon`, description: 'Use your phone number for now.' });
   }
 
-  const examples: Record<string, string> = {
-    '+250': '788 123 456',
-    '+254': '712 345 678',
-    '+1':   '416 555 0100',
-    '+44':  '7700 900 123',
-    '+33':  '6 12 34 56 78',
-  };
-  const placeholder = examples[dialCode] || '7XX XXX XXX';
+  const ctaDisabled = isDesktop
+    ? (!desktopReady && !desktopIsEmail) || loading
+    : !mobileReady || loading;
+  const ctaReady = isDesktop ? (desktopReady || desktopIsEmail) : mobileReady;
 
   return (
     <div className="bu-auth-root">
-      {/* Hero — visible on mobile, hidden on desktop via CSS */}
+
+      {/* ── Dark hero (mobile only — hidden on desktop via CSS) ── */}
       <div className="bu-hero">
         <div className="bu-logo-wrap">
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -94,7 +161,7 @@ export default function AuthPhone() {
         <h1 className="bu-title">BridgeUp</h1>
         <p className="bu-subtitle">Connect with help in your community —<br />food, shelter, jobs, medical care and more.</p>
         <div className="bu-stats">
-          {[{ n: '2,400+', l: 'Helped' }, { n: '12', l: 'Cities' }, { n: '800+', l: 'Helpers' }].map(s => (
+          {[{ n: '2,400+', l: 'Helped' }, { n: '12', l: 'Cities' }, { n: '800+', l: 'Helpers' }].map((s) => (
             <div key={s.l} className="bu-stat">
               <span className="bu-stat-n">{s.n}</span>
               <span className="bu-stat-l">{s.l}</span>
@@ -103,9 +170,10 @@ export default function AuthPhone() {
         </div>
       </div>
 
-      {/* Card */}
+      {/* ── Card ─────────────────────────────────────────────────────────── */}
       <div className="bu-card">
-        {/* Desktop logo — shown on sm+ via CSS class */}
+
+        {/* Desktop brand logo (hidden on mobile via CSS) */}
         <div className="bu-desktop-brand">
           <div className="bu-desktop-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -115,67 +183,113 @@ export default function AuthPhone() {
           <span className="bu-desktop-name">BridgeUp</span>
         </div>
 
-        <h2 className="bu-card-title">Enter your number</h2>
-        <p className="bu-card-sub">We'll send a 6-digit verification code via SMS</p>
+        {/* ── DESKTOP input area ─────────────────────────────────────────── */}
+        {isDesktop ? (
+          <>
+            <h2 className="bu-card-title">What's your phone number or email?</h2>
+            <p className="bu-card-sub">We'll send you a verification code via SMS</p>
 
-        <div className="bu-input-row">
-          <div className="bu-cc-wrap">
-            <div className="bu-cc-display" aria-hidden="true">
-              <span className="bu-cc-flag">{selected.flag}</span>
-              <span className="bu-cc-code">{dialCode}</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
-            <select
-              className="bu-cc-select"
-              value={dialCode}
-              onChange={e => { setDialCode(e.target.value); setTouched(false); setNumber(''); }}
-              aria-label="Select country code"
+            <input
+              type="text"
+              inputMode="text"
+              autoComplete="tel email"
+              placeholder="+1 416 555 0100 or you@example.com"
+              value={desktopInput}
+              onChange={(e) => { setDesktopInput(e.target.value); setDesktopTouched(false); }}
+              onBlur={() => setDesktopTouched(true)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleDesktopSend()}
+              className={`bu-phone-input bu-input-solo${desktopShowError ? ' bu-phone-input-error' : ''}`}
+              autoFocus
+              style={{ marginBottom: 8 }}
+            />
+
+            {desktopShowError && (
+              <p className="bu-field-error">
+                Enter a valid phone (include country code, e.g. +1) or email address.
+              </p>
+            )}
+            {!desktopShowError && desktopInput.length === 0 && (
+              <p className="bu-hint">Example: +1 416 555 0100 · +250 788 123 456 · you@email.com</p>
+            )}
+            {!desktopShowError && desktopInput.length > 0 && <div style={{ marginBottom: 12 }} />}
+
+            <button
+              className={`bu-btn${ctaReady ? ' bu-btn-active' : ''}`}
+              onClick={() => void handleDesktopSend()}
+              disabled={ctaDisabled}
             >
-              {COUNTRIES.map(c => (
-                <option key={c.code} value={c.dial}>
-                  {c.flag}  {c.name}  ({c.dial})
-                </option>
-              ))}
-            </select>
-          </div>
+              {loading
+                ? <><Loader2 className="bu-spin" />&nbsp;Sending code…</>
+                : <>Continue &nbsp;→</>}
+            </button>
+          </>
+        ) : (
+          /* ── MOBILE input area ─────────────────────────────────────────── */
+          <>
+            <h2 className="bu-card-title">Enter your number</h2>
+            <p className="bu-card-sub">We'll send a 6-digit verification code via SMS</p>
 
-          <input
-            type="tel"
-            inputMode="numeric"
-            placeholder={placeholder}
-            value={number}
-            onChange={e => { setNumber(e.target.value.replace(/[^\d\s\-]/g, '')); setTouched(false); }}
-            onBlur={() => setTouched(true)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
-            className={`bu-phone-input${showError ? ' bu-phone-input-error' : ''}`}
-            autoFocus
-            autoComplete="tel-local"
-            name="phone"
-            aria-invalid={showError}
-          />
-        </div>
+            <div className="bu-input-row">
+              <div className="bu-cc-wrap">
+                <div className="bu-cc-display" aria-hidden="true">
+                  <span className="bu-cc-flag">{selectedCountry.flag}</span>
+                  <span className="bu-cc-code">{dialCode}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <select
+                  className="bu-cc-select"
+                  value={dialCode}
+                  onChange={(e) => { setDialCode(e.target.value); setMobileTouched(false); setMobileNumber(''); }}
+                  aria-label="Select country code"
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.dial}>
+                      {c.flag}  {c.name}  ({c.dial})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {showError && (
-          <p className="bu-field-error">
-            Please enter a valid phone number for {selected.name} ({dialCode}).
-          </p>
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder={mobilePlaceholder}
+                value={mobileNumber}
+                onChange={(e) => { setMobileNumber(e.target.value.replace(/[^\d\s\-]/g, '')); setMobileTouched(false); }}
+                onBlur={() => setMobileTouched(true)}
+                onKeyDown={(e) => e.key === 'Enter' && void handleMobileSend()}
+                className={`bu-phone-input${mobileShowError ? ' bu-phone-input-error' : ''}`}
+                autoFocus
+                autoComplete="tel-local"
+                name="phone"
+                aria-invalid={mobileShowError}
+              />
+            </div>
+
+            {mobileShowError && (
+              <p className="bu-field-error">
+                Please enter a valid phone number for {selectedCountry.name} ({dialCode}).
+              </p>
+            )}
+            {!mobileShowError && (
+              <p className="bu-hint">
+                Example for {selectedCountry.name}: {dialCode} {mobilePlaceholder}
+              </p>
+            )}
+
+            <button
+              className={`bu-btn${mobileReady ? ' bu-btn-active' : ''}`}
+              onClick={() => void handleMobileSend()}
+              disabled={!mobileReady || loading}
+            >
+              {loading
+                ? <><Loader2 className="bu-spin" />&nbsp;Sending code…</>
+                : <>Continue &nbsp;→</>}
+            </button>
+          </>
         )}
-        {!showError && (
-          <p className="bu-hint">
-            Example for {selected.name}: {dialCode} {placeholder}
-          </p>
-        )}
 
-        <button
-          className={`bu-btn${ready ? ' bu-btn-active' : ''}`}
-          onClick={handleSend}
-          disabled={!ready || loading}
-        >
-          {loading
-            ? <><Loader2 className="bu-spin" />&nbsp;Sending code…</>
-            : <>Continue &nbsp;→</>}
-        </button>
-
+        {/* ── Social sign-in (same on both desktop and mobile) ─────────── */}
         <div className="bu-divider">or sign in with</div>
 
         <div className="bu-social-btns">
