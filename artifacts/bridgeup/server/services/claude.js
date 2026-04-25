@@ -2,17 +2,17 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-// ─── Guard: fail fast if API key is missing ───────────────────────────────────
-if (!process.env.CLAUDE_API_KEY) {
-  console.error('[Claude] FATAL: CLAUDE_API_KEY environment variable is not set.');
-  console.error('[Claude] Add your Anthropic API key to Replit Secrets.');
-  process.exit(1);
+// ─── Lazy client — accepts ANTHROPIC_API_KEY or CLAUDE_API_KEY ───────────────
+let _client = null;
+function getClient() {
+  if (_client) return _client;
+  const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+  if (!key) throw Object.assign(new Error('Set ANTHROPIC_API_KEY in Vercel environment variables.'), { status: 503 });
+  _client = new Anthropic({ apiKey: key });
+  return _client;
 }
 
-const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-
-// Spec mandates this exact model for ALL conversations
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 
 // Request timeout — 30 seconds per spec requirement (Twilio voice needs < 10s)
 const TIMEOUT_MS = 30_000;
@@ -125,7 +125,7 @@ async function callClaude({ system, messages, maxTokens = 512 }) {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const response = await client.messages.create(
+    const response = await getClient().messages.create(
       {
         model: MODEL,
         max_tokens: maxTokens,

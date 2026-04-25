@@ -111,6 +111,9 @@ async function sendEmail({ to, subject, text, html }) {
  * @returns {Promise<string>}   Public URL
  */
 async function uploadVerificationDoc(file, userId) {
+  if (!bucket) {
+    throw new Error('File storage is not configured. Set FIREBASE_STORAGE_BUCKET or migrate to Supabase Storage.');
+  }
   const ext        = path.extname(file.originalname).toLowerCase();
   const storagePath = `verification-docs/${userId}/${Date.now()}${ext}`;
   const fileRef    = bucket.file(storagePath);
