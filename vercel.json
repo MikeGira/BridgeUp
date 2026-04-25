@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
+  "installCommand": "NODE_ENV=development npm install --include=dev",
   "functions": {
     "api/**/*.js": { "maxDuration": 30 }
   },
