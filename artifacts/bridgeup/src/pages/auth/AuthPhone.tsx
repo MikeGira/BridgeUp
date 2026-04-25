@@ -1,40 +1,42 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Phone, Globe, ChevronDown, ArrowRight, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { authApi } from '@/lib/api';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 const COUNTRIES = [
-  { code: 'RW', flag: '🇷🇼', name: 'Rwanda',       dial: '+250' },
-  { code: 'KE', flag: '🇰🇪', name: 'Kenya',        dial: '+254' },
-  { code: 'TZ', flag: '🇹🇿', name: 'Tanzania',     dial: '+255' },
-  { code: 'UG', flag: '🇺🇬', name: 'Uganda',       dial: '+256' },
-  { code: 'NG', flag: '🇳🇬', name: 'Nigeria',      dial: '+234' },
-  { code: 'GH', flag: '🇬🇭', name: 'Ghana',        dial: '+233' },
-  { code: 'CA', flag: '🇨🇦', name: 'Canada',       dial: '+1'   },
-  { code: 'US', flag: '🇺🇸', name: 'United States',dial: '+1'   },
-  { code: 'GB', flag: '🇬🇧', name: 'UK',           dial: '+44'  },
-  { code: 'FR', flag: '🇫🇷', name: 'France',       dial: '+33'  },
+  { code: 'RW', flag: '🇷🇼', name: 'Rwanda',        dial: '+250' },
+  { code: 'KE', flag: '🇰🇪', name: 'Kenya',         dial: '+254' },
+  { code: 'TZ', flag: '🇹🇿', name: 'Tanzania',      dial: '+255' },
+  { code: 'UG', flag: '🇺🇬', name: 'Uganda',        dial: '+256' },
+  { code: 'NG', flag: '🇳🇬', name: 'Nigeria',       dial: '+234' },
+  { code: 'GH', flag: '🇬🇭', name: 'Ghana',         dial: '+233' },
+  { code: 'CM', flag: '🇨🇲', name: 'Cameroon',      dial: '+237' },
+  { code: 'SN', flag: '🇸🇳', name: 'Senegal',       dial: '+221' },
+  { code: 'ZA', flag: '🇿🇦', name: 'South Africa',  dial: '+27'  },
+  { code: 'CA', flag: '🇨🇦', name: 'Canada',        dial: '+1'   },
+  { code: 'US', flag: '🇺🇸', name: 'United States', dial: '+1'   },
+  { code: 'GB', flag: '🇬🇧', name: 'UK',            dial: '+44'  },
+  { code: 'FR', flag: '🇫🇷', name: 'France',        dial: '+33'  },
+  { code: 'DE', flag: '🇩🇪', name: 'Germany',       dial: '+49'  },
+  { code: 'AU', flag: '🇦🇺', name: 'Australia',     dial: '+61'  },
+  { code: 'IN', flag: '🇮🇳', name: 'India',         dial: '+91'  },
 ];
 
 export default function AuthPhone() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [country, setCountry] = useState(COUNTRIES[0]);
+  const [dialCode, setDialCode] = useState('+250');
   const [number, setNumber] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showCountries, setShowCountries] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const phone = country.dial + number.replace(/\D/g, '');
+  const selected = COUNTRIES.find(c => c.dial === dialCode) ?? COUNTRIES[0];
+  const digits = number.replace(/\D/g, '');
+  const phone = dialCode + digits;
+  const ready = digits.length >= 6;
 
   async function handleSend() {
-    if (!number.trim()) {
-      toast({ title: 'Enter your phone number', variant: 'destructive' });
-      inputRef.current?.focus();
-      return;
-    }
+    if (!ready || loading) return;
     setLoading(true);
     try {
       await authApi.sendOtp(phone);
@@ -52,117 +54,85 @@ export default function AuthPhone() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Hero section */}
-      <div className="flex-1 flex flex-col">
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary/90 to-primary px-6 pt-16 pb-24">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-8 right-8 w-40 h-40 rounded-full bg-white" />
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full bg-white" />
-          </div>
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-6 border border-white/30">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">BridgeUp</h1>
-            <p className="text-white/80 text-lg leading-relaxed max-w-xs">
-              Connect with help in your community — instantly, safely, anywhere.
-            </p>
-          </div>
+    <div className="bu-auth-root">
+      {/* Dark hero */}
+      <div className="bu-hero">
+        <div className="bu-logo-wrap">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
         </div>
+        <h1 className="bu-title">BridgeUp</h1>
+        <p className="bu-subtitle">Get help instantly — food, shelter,<br />jobs, medical care, and more.</p>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 divide-x divide-border -mt-6 mx-6 bg-card rounded-2xl shadow-lg border border-border overflow-hidden">
+        <div className="bu-stats">
           {[
-            { label: 'People helped', value: '2,400+' },
-            { label: 'Cities', value: '12' },
-            { label: 'Helpers', value: '800+' },
-          ].map((s) => (
-            <div key={s.label} className="flex flex-col items-center py-4 px-2">
-              <span className="text-xl font-bold text-foreground">{s.value}</span>
-              <span className="text-xs text-muted-foreground text-center mt-0.5">{s.label}</span>
+            { n: '2,400+', l: 'Helped' },
+            { n: '12',     l: 'Cities'  },
+            { n: '800+',   l: 'Helpers' },
+          ].map(s => (
+            <div key={s.l} className="bu-stat">
+              <span className="bu-stat-n">{s.n}</span>
+              <span className="bu-stat-l">{s.l}</span>
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Form */}
-        <div className="px-6 pt-8 pb-6 flex-1 flex flex-col justify-end gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Phone className="w-4 h-4" />
-              Enter your phone number to get started
-            </p>
+      {/* White form card */}
+      <div className="bu-card">
+        <h2 className="bu-card-title">Enter your number</h2>
+        <p className="bu-card-sub">We'll send you a 6-digit verification code</p>
 
-            <div className="flex gap-3">
-              {/* Country selector */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowCountries(!showCountries)}
-                  className="flex items-center gap-1.5 px-3 py-4 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  <span className="text-base">{country.flag}</span>
-                  <span className="text-muted-foreground">{country.dial}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-
-                {showCountries && (
-                  <div className="absolute top-full left-0 z-50 mt-1 w-56 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-                    {COUNTRIES.map((c) => (
-                      <button
-                        key={c.code + c.dial}
-                        type="button"
-                        onClick={() => { setCountry(c); setShowCountries(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors text-left"
-                      >
-                        <span className="text-base">{c.flag}</span>
-                        <span className="flex-1 text-foreground">{c.name}</span>
-                        <span className="text-muted-foreground">{c.dial}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Phone input */}
-              <input
-                ref={inputRef}
-                type="tel"
-                inputMode="numeric"
-                placeholder="Phone number"
-                value={number}
-                onChange={(e) => setNumber(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="flex-1 px-4 py-4 rounded-xl border border-border bg-card text-base focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
-              />
+        <div className="bu-input-row">
+          {/* Country code — native select overlaid on styled display */}
+          <div className="bu-cc-wrap">
+            <div className="bu-cc-display">
+              <span className="bu-cc-flag">{selected.flag}</span>
+              <span className="bu-cc-code">{dialCode}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="3"><path d="M6 9l6 6 6-6"/></svg>
             </div>
+            <select
+              className="bu-cc-select"
+              value={dialCode}
+              onChange={e => setDialCode(e.target.value)}
+              aria-label="Country code"
+            >
+              {COUNTRIES.map(c => (
+                <option key={c.code + c.dial} value={c.dial}>
+                  {c.flag}  {c.name}  ({c.dial})
+                </option>
+              ))}
+            </select>
           </div>
 
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-semibold rounded-xl"
-            onClick={handleSend}
-            disabled={loading || !number.trim()}
-          >
-            {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin mr-2" />Sending code...</>
-            ) : (
-              <>Continue <ArrowRight className="w-5 h-5 ml-2" /></>
-            )}
-          </Button>
-
-          <p className="text-xs text-center text-muted-foreground leading-relaxed">
-            By continuing, you agree to our Terms and Privacy Policy.
-            We&apos;ll send a verification code to this number.
-          </p>
-
-          <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground pt-2">
-            <Globe className="w-3.5 h-3.5" />
-            <span>Available in Canada, Rwanda, Kenya and 10+ countries</span>
-          </div>
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="Phone number"
+            value={number}
+            onChange={e => setNumber(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            className="bu-phone-input"
+            autoFocus
+            autoComplete="tel-local"
+          />
         </div>
+
+        <button
+          className={`bu-btn${ready ? ' bu-btn-active' : ''}`}
+          onClick={handleSend}
+          disabled={!ready || loading}
+        >
+          {loading
+            ? <><Loader2 className="bu-spin" /> Sending…</>
+            : <>Continue <span className="bu-arrow">→</span></>}
+        </button>
+
+        <p className="bu-legal">
+          By continuing you agree to our Terms &amp; Privacy Policy.
+          Standard SMS rates may apply.
+        </p>
       </div>
     </div>
   );
