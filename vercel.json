@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "cd artifacts/bridgeup && npm run build",
   "outputDirectory": "artifacts/bridgeup/dist/public",
-  "installCommand": "npm install --prefix artifacts/bridgeup",
+  "installCommand": "npm install --prefix artifacts/bridgeup --production=false",
   "functions": {
     "api/server.js": {
       "memory": 1024,
