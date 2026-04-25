@@ -310,7 +310,7 @@
 /* ─── Leaflet map overrides ───────────────────────────────────────────────── */
 .leaflet-container {
   font-family: var(--font-sans);
-  background: #e8e0d8;
+  background: #f2f2f2;
 }
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
@@ -559,18 +559,18 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .bu-btn.bu-btn-active {
-  background: #2563eb;
+  background: #000000;
   color: #ffffff;
   cursor: pointer;
 }
 
 .bu-btn.bu-btn-active:active {
   transform: scale(0.98);
-  background: #1d4ed8;
+  background: #1a1a1a;
 }
 
 .bu-btn-active:not(:disabled):hover {
-  background: #1d4ed8;
+  background: #1a1a1a;
 }
 
 .bu-arrow { font-size: 18px; }
