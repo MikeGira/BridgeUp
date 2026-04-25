@@ -93,7 +93,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: NODE_ENV=development npm install --include=dev
 
       - name: TypeScript typecheck
         run: npx tsc --noEmit || true
