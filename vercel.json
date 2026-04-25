@@ -1,47 +1,32 @@
 {
   "version": 2,
-  "buildCommand": "cd artifacts/bridgeup && npm run build",
-  "outputDirectory": "artifacts/bridgeup/dist/public",
-  "installCommand": "NODE_ENV=development npm install --prefix artifacts/bridgeup --ignore-scripts",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
   "functions": {
-    "api/server.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
+    "api/**/*.js": { "maxDuration": 30 }
   },
   "rewrites": [
-    { "source": "/api/ping",        "destination": "/api/ping.js"   },
-    { "source": "/api/debug",       "destination": "/api/debug.js"  },
-    { "source": "/api/:path*",      "destination": "/api/server.js" },
-    { "source": "/voice/:path*",    "destination": "/api/server.js" },
-    { "source": "/sms/:path*",      "destination": "/api/server.js" },
-    { "source": "/stripe/:path*",   "destination": "/api/server.js" },
-    { "source": "/flutterwave/:path*", "destination": "/api/server.js" },
-    { "source": "/africastalking/:path*", "destination": "/api/server.js" },
-    { "source": "/(.*)",            "destination": "/index.html"   }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options",    "value": "nosniff"                                },
-        { "key": "X-Frame-Options",           "value": "DENY"                                   },
-        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin"        },
-        { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "X-Content-Type-Options",    "value": "nosniff" },
+        { "key": "X-Frame-Options",           "value": "DENY" },
+        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=(self)" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
       ]
     },
     {
       "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ]
 }

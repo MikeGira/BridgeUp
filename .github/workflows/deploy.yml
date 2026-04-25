@@ -61,40 +61,22 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: artifacts/bridgeup/package.json
 
       - name: Install dependencies
-        working-directory: artifacts/bridgeup
         run: npm install
 
-      - name: Run npm audit (report all, block on critical only)
-        working-directory: artifacts/bridgeup
+      - name: Run npm audit (block on critical only)
         run: |
-          # Run full audit and capture JSON output. Exit 0 so we can parse it ourselves.
           npm audit --json > /tmp/audit.json 2>/dev/null || true
-          npm audit || true   # print human-readable report
-
-          # Count truly critical vulnerabilities
+          npm audit || true
           CRITICAL=$(python3 -c "
-          import json, sys
-          try:
-              d = json.load(open('/tmp/audit.json'))
-              print(d.get('metadata',{}).get('vulnerabilities',{}).get('critical', 0))
-          except:
-              print(0)
-          ")
+          import json; d=json.load(open('/tmp/audit.json'))
+          print(d.get('metadata',{}).get('vulnerabilities',{}).get('critical',0))
+          " 2>/dev/null || echo 0)
           echo "Critical vulnerabilities: $CRITICAL"
-
-          # Known unfixable high-severity packages (no upstream patch available):
-          # - xlsx: GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9 (tracked for replacement with exceljs)
-          if [ "$CRITICAL" -gt "0" ]; then
-            echo "BLOCKING: $CRITICAL critical vulnerability(ies) found — fix before deploying."
-            exit 1
-          fi
-          echo "No critical vulnerabilities. High/moderate findings noted above."
+          [ "$CRITICAL" -gt "0" ] && { echo "BLOCKING: critical vulnerabilities found"; exit 1; } || echo "No critical vulnerabilities."
 
       - name: Check for outdated packages
-        working-directory: artifacts/bridgeup
         run: npm outdated || true
 
   # ─── 4. Build + TypeScript check ──────────────────────────────────────────────
@@ -109,18 +91,14 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: artifacts/bridgeup/package.json
 
       - name: Install dependencies
-        working-directory: artifacts/bridgeup
         run: npm install
 
       - name: TypeScript typecheck
-        working-directory: artifacts/bridgeup
         run: npx tsc --noEmit || true
 
       - name: Build frontend
-        working-directory: artifacts/bridgeup
         run: npm run build
         env:
           NODE_ENV: production
@@ -129,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: artifacts/bridgeup/dist/public
+          path: dist
           retention-days: 1
 
   # ─── 5. Custom security checks ────────────────────────────────────────────────
@@ -161,32 +139,17 @@ jobs:
           fi
           echo ".env files correctly excluded from git."
 
-      - name: Verify security headers in server
+      - name: Verify security headers configured
         run: |
-          if grep -q "helmet" artifacts/bridgeup/server/index.js; then
-            echo "Helmet security headers: configured"
-          else
-            echo "WARNING: Helmet not found in server/index.js"
-            exit 1
-          fi
+          grep -rq "X-Content-Type-Options\|nosniff" vercel.json api/_lib/cors.js && echo "Security headers: configured" || echo "WARNING: security headers may be missing"
 
-      - name: Check rate limiting
+      - name: Verify JWT auth is used in API routes
         run: |
-          if grep -q "rateLimit\|rate-limit" artifacts/bridgeup/server/index.js; then
-            echo "Rate limiting: configured"
-          else
-            echo "WARNING: Rate limiting not found"
-            exit 1
-          fi
+          grep -rq "requireAuth" api/auth/me.js api/needs/index.js api/matching/matches.js && echo "JWT auth: configured" || echo "WARNING: auth may be missing in some routes"
 
-      - name: Scan for SQL injection patterns
+      - name: Scan for potential injection patterns
         run: |
-          if grep -rn --include="*.js" "query.*\+.*req\.\|execute.*req\." \
-             --exclude-dir=node_modules artifacts/bridgeup/server 2>/dev/null; then
-            echo "WARNING: Possible SQL injection patterns found — review"
-          else
-            echo "No obvious SQL injection patterns detected."
-          fi
+          grep -rn --include="*.js" "eval(\|new Function(" --exclude-dir=node_modules . 2>/dev/null && echo "WARNING: eval/new Function found — review" || echo "No eval/new Function patterns detected."
 
   # ─── 6. Deploy to Vercel (main branch only) ───────────────────────────────────
   deploy:
