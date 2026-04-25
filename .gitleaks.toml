@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ignore example/template files — values are placeholders, not real secrets"
+paths = [
+  ".env.example",
+  ".env.template",
+  "*.example",
+]
