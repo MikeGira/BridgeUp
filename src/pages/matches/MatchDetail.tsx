@@ -1,6 +1,6 @@
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, CheckCircle, XCircle, Star, MapPin, Loader, Navigation, Phone } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Star, MapPin, Loader, Navigation, Phone, MessageCircle, Car } from 'lucide-react';
 import { matchesApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -43,10 +43,31 @@ export default function MatchDetail() {
   const isHelper = user?.role === 'helper';
   const isPending = match?.status === 'pending';
 
+  // ── Deep links (no API key needed) ───────────────────────────────────────
+  const helperLat = match?.helper?.locationLat;
+  const helperLng = match?.helper?.locationLng;
+  const helperName = encodeURIComponent(match?.helper?.organization || match?.helper?.user?.displayName || 'Helper');
+  const helperPhone = match?.helper?.user?.phone?.replace(/\D/g, '');
+  const needLocation = match?.need?.location;
+
+  const googleMapsUrl = helperLat
+    ? `https://maps.google.com/maps?daddr=${helperLat},${helperLng}&travelmode=driving`
+    : needLocation
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(needLocation)}`
+    : null;
+
+  const uberUrl = helperLat
+    ? `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${helperLat}&dropoff[longitude]=${helperLng}&dropoff[nickname]=${helperName}`
+    : null;
+
+  const whatsappUrl = helperPhone ? `https://wa.me/${helperPhone}` : null;
+  const callUrl     = helperPhone ? `tel:+${helperPhone}` : null;
+
   return (
     <AppShell hideNav>
       <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="flex items-center gap-3 px-4 pt-12 pb-4">
+        <div className="bu-page">
+        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
           <button type="button" onClick={() => navigate('/matches')} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted">
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -70,7 +91,7 @@ export default function MatchDetail() {
         )}
 
         {!isLoading && match && (
-          <div className="px-4 pb-8 space-y-4">
+          <div className="px-5 pb-8 space-y-4">
             {/* Uber-style status hero */}
             <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 rounded-3xl p-6 border border-primary/20">
               <div className="flex items-center gap-4">
@@ -145,6 +166,58 @@ export default function MatchDetail() {
               </div>
             )}
 
+            {/* ── Action buttons: directions, Uber, call, WhatsApp ── */}
+            {!isHelper && (googleMapsUrl || uberUrl || callUrl || whatsappUrl) && (
+              <div className="grid grid-cols-2 gap-3">
+                {googleMapsUrl && (
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[13px] font-semibold transition-colors"
+                    style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', textDecoration: 'none' }}
+                  >
+                    <Navigation style={{ width: 16, height: 16 }} />
+                    Get Directions
+                  </a>
+                )}
+                {uberUrl && (
+                  <a
+                    href={uberUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[13px] font-semibold transition-colors"
+                    style={{ background: '#000000', color: '#ffffff', textDecoration: 'none' }}
+                  >
+                    <Car style={{ width: 16, height: 16 }} />
+                    Book Uber
+                  </a>
+                )}
+                {callUrl && (
+                  <a
+                    href={callUrl}
+                    className="flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[13px] font-semibold"
+                    style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', textDecoration: 'none' }}
+                  >
+                    <Phone style={{ width: 16, height: 16 }} />
+                    Call Helper
+                  </a>
+                )}
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[13px] font-semibold"
+                    style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', textDecoration: 'none' }}
+                  >
+                    <MessageCircle style={{ width: 16, height: 16 }} />
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Helper actions */}
             {isHelper && isPending && (
               <div className="space-y-3">
@@ -182,6 +255,7 @@ export default function MatchDetail() {
             </div>
           </div>
         )}
+        </div>{/* bu-page */}
       </div>
     </AppShell>
   );

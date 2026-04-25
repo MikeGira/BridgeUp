@@ -35,14 +35,18 @@ module.exports = handler(async (req, res) => {
   try {
     const ai = getClient();
     const response = await ai.messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 500,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
       system: SYSTEM,
-      messages: messages.slice(-10), // keep last 10 for context window
+      messages: messages.slice(-10),
     });
     reply = response.content[0].text;
   } catch (err) {
-    console.error('[intake] AI error:', err.message);
-    reply = 'I had trouble understanding that. Could you try describing your need in a few words?';
+    console.error('[intake] AI error:', err.status || err.message, err.error || '');
+    const is503 = err.status === 503 || (err.message || '').includes('not configured');
+    reply = is503
+      ? 'AI assistant is not available right now. Please use the form to post your need.'
+      : 'I had a moment of confusion. Could you try again in a few words?';
   }
 
   // Check for completion signal

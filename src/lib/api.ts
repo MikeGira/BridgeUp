@@ -1,7 +1,7 @@
 const BASE = '/api';
 
 function getToken(): string | null {
-  return sessionStorage.getItem('bridgeup_token');
+  return localStorage.getItem('bridgeup_token');
 }
 
 async function request<T>(
