@@ -1,12 +1,28 @@
 import { useEffect, useRef } from 'react';
 import type { Need } from '@/lib/api';
 
+export type TileType = 'standard' | 'satellite';
+
 interface MapViewProps {
-  center: { lat: number; lng: number };
-  needs?: Need[];
+  center:       { lat: number; lng: number };
+  needs?:       Need[];
   userLocation?: { lat: number; lng: number } | null;
-  zoom?: number;
+  zoom?:        number;
+  tileType?:    TileType;
 }
+
+const TILES: Record<TileType, { url: string; attribution: string; opts: Record<string, unknown> }> = {
+  standard: {
+    url:         'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    opts:        { subdomains: 'abcd', maxZoom: 19 },
+  },
+  satellite: {
+    url:         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    opts:        { maxZoom: 19 },
+  },
+};
 
 const CATEGORY_COLORS: Record<string, string> = {
   food:       '#f97316',
@@ -31,16 +47,16 @@ declare global {
   }
 }
 
-export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapViewProps) {
-  const mapRef     = useRef<HTMLDivElement>(null);
-  const leafletMap = useRef<import('leaflet').Map | null>(null);
-  const markersRef = useRef<import('leaflet').LayerGroup | null>(null);
+export function MapView({ center, needs = [], userLocation, zoom = 13, tileType = 'standard' }: MapViewProps) {
+  const mapRef      = useRef<HTMLDivElement>(null);
+  const leafletMap  = useRef<import('leaflet').Map | null>(null);
+  const markersRef  = useRef<import('leaflet').LayerGroup | null>(null);
+  const tileRef     = useRef<import('leaflet').TileLayer | null>(null);
+  const userMarker  = useRef<import('leaflet').Marker | null>(null);
 
+  // ── Init map ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current) return;
-    if (leafletMap.current) return;
-
-    // Leaflet is loaded via CDN in index.html
+    if (!mapRef.current || leafletMap.current) return;
     const L = window.L;
     if (!L) return;
 
@@ -50,15 +66,11 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
       zoomControl: false,
     });
 
-    // CartoDB Positron — clean neutral white like Google Maps (no API key needed)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map);
+    const cfg = TILES[tileType];
+    tileRef.current = L.tileLayer(cfg.url, { attribution: cfg.attribution, ...cfg.opts }).addTo(map);
 
-    // Zoom control top-right
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    // Zoom control — bottom-right to match Google Maps convention
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     markersRef.current = L.layerGroup().addTo(map);
     leafletMap.current = map;
@@ -67,18 +79,35 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
     return () => {
       map.remove();
       leafletMap.current = null;
+      tileRef.current    = null;
+      userMarker.current = null;
       window.bridgeupMap = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update center when it changes
+  // ── Switch tile layer when tileType changes ──────────────────────────────
+  useEffect(() => {
+    if (!leafletMap.current) return;
+    const L = window.L;
+    if (!L) return;
+
+    if (tileRef.current) {
+      leafletMap.current.removeLayer(tileRef.current);
+    }
+    const cfg = TILES[tileType];
+    tileRef.current = L.tileLayer(cfg.url, { attribution: cfg.attribution, ...cfg.opts })
+      .addTo(leafletMap.current);
+  }, [tileType]);
+
+  // ── Pan/zoom to new center ────────────────────────────────────────────────
   useEffect(() => {
     if (leafletMap.current) {
       leafletMap.current.setView([center.lat, center.lng], zoom, { animate: true });
     }
   }, [center.lat, center.lng, zoom]);
 
-  // Draw need markers
+  // ── Draw need markers ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!leafletMap.current || !markersRef.current) return;
     const L = window.L;
@@ -89,7 +118,7 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
     needs.forEach((need) => {
       if (!need.locationLat || !need.locationLng) return;
       const color = CATEGORY_COLORS[need.category] || '#6b7280';
-      const size  = URGENCY_SIZES[need.urgency] || 14;
+      const size  = URGENCY_SIZES[need.urgency]    || 14;
       const pulse = need.urgency === 'immediate';
 
       const icon = L.divIcon({
@@ -97,8 +126,7 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
           <div style="position:relative;width:${size * 2}px;height:${size * 2}px;">
             ${pulse ? `<div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.3;animation:bridgeup-ping 1.5s ease-in-out infinite;"></div>` : ''}
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>
-          </div>
-        `,
+          </div>`,
         className: '',
         iconSize:  [size * 2, size * 2],
         iconAnchor:[size, size],
@@ -106,39 +134,37 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
 
       const marker = L.marker([need.locationLat, need.locationLng], { icon });
       marker.bindPopup(`
-        <div style="font-family:sans-serif;min-width:180px">
-          <div style="font-weight:600;margin-bottom:4px;text-transform:capitalize">${need.category}</div>
-          <div style="font-size:0.85em;color:#666;margin-bottom:6px">${need.description.slice(0, 80)}${need.description.length > 80 ? '...' : ''}</div>
-          <div style="font-size:0.75em;color:#999">${need.location || 'Location not specified'}</div>
-          <div style="margin-top:8px">
-            <a href="/needs/${need.id}" style="color:#3b82f6;font-size:0.85em;text-decoration:none">View details →</a>
-          </div>
-        </div>
-      `);
+        <div style="font-family:Inter,sans-serif;min-width:190px;padding:2px">
+          <div style="font-weight:700;font-size:14px;text-transform:capitalize;margin-bottom:4px;color:#111">${need.category}</div>
+          <div style="font-size:12px;color:#555;margin-bottom:6px;line-height:1.4">${need.description.slice(0, 100)}${need.description.length > 100 ? '…' : ''}</div>
+          ${need.location ? `<div style="font-size:11px;color:#888;margin-bottom:8px">📍 ${need.location}</div>` : ''}
+          <a href="/needs/${need.id}" style="color:#2563eb;font-size:12px;font-weight:600;text-decoration:none">View details →</a>
+        </div>`);
       markersRef.current!.addLayer(marker);
     });
   }, [needs]);
 
-  // User location marker
+  // ── User location marker ──────────────────────────────────────────────────
   useEffect(() => {
     if (!leafletMap.current || !userLocation) return;
     const L = window.L;
     if (!L) return;
 
+    if (userMarker.current) userMarker.current.remove();
+
     const icon = L.divIcon({
       html: `
-        <div style="position:relative;width:20px;height:20px;">
+        <div style="position:relative;width:22px;height:22px;">
           <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.2;animation:bridgeup-ping 2s ease-in-out infinite;"></div>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#3b82f6;border:2.5px solid white;box-shadow:0 2px 6px rgba(59,130,246,0.5);"></div>
-        </div>
-      `,
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;background:#3b82f6;border:2.5px solid white;box-shadow:0 2px 6px rgba(59,130,246,0.6);"></div>
+        </div>`,
       className: '',
-      iconSize:  [20, 20],
-      iconAnchor:[10, 10],
+      iconSize:  [22, 22],
+      iconAnchor:[11, 11],
     });
 
-    L.marker([userLocation.lat, userLocation.lng], { icon })
-      .bindTooltip('You are here', { permanent: false })
+    userMarker.current = L.marker([userLocation.lat, userLocation.lng], { icon })
+      .bindTooltip('You are here', { permanent: false, direction: 'top' })
       .addTo(leafletMap.current);
   }, [userLocation]);
 
@@ -147,8 +173,20 @@ export function MapView({ center, needs = [], userLocation, zoom = 13 }: MapView
       <style>{`
         @keyframes bridgeup-ping {
           0%, 100% { transform: scale(1); opacity: 0.3; }
-          50%       { transform: scale(2); opacity: 0; }
+          50%       { transform: scale(2.2); opacity: 0; }
         }
+        /* Style Leaflet zoom buttons to match Google Maps */
+        .leaflet-control-zoom a {
+          width: 32px !important; height: 32px !important;
+          line-height: 32px !important;
+          font-size: 18px !important;
+          background: #fff !important;
+          color: #444 !important;
+          border-radius: 4px !important;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+        }
+        .leaflet-control-zoom a:hover { background: #f5f5f5 !important; }
+        .leaflet-control-zoom { border: none !important; }
       `}</style>
       <div ref={mapRef} className="w-full h-full" />
     </>

@@ -5,7 +5,7 @@
 //   - Map tiles (cartocdn, openstreetmap): network-only (too large to cache)
 //   - Everything else: network-first with cache fallback
 
-const CACHE = 'bridgeup-v1';
+const CACHE = 'bridgeup-v2'; // bump version to invalidate old cached assets
 
 const PRECACHE = [
   '/',

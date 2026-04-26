@@ -11,6 +11,7 @@ import { needsApi, matchesApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { AppShell } from '@/components/layout/AppShell';
 import { MapView } from '@/components/map/MapView';
+import type { TileType } from '@/components/map/MapView';
 import { NeedCard } from '@/components/needs/NeedCard';
 
 // ─── Category filter pills (no "All" — redundant on a map view) ──────────────
@@ -38,6 +39,7 @@ export default function Home() {
   const [sheetState, setSheetState] = useState<SheetState>('peek');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [activeFilter, setActiveFilter] = useState<Category | null>(null);
+  const [tileType,     setTileType]     = useState<TileType>('standard');
 
   const { data: needsData } = useQuery({
     queryKey: ['my-needs'],
@@ -83,6 +85,7 @@ export default function Home() {
           center={userLocation ?? { lat: -1.9441, lng: 30.0619 }}
           needs={mapNeeds}
           userLocation={userLocation}
+          tileType={tileType}
         />
       </div>
 
@@ -184,6 +187,47 @@ export default function Home() {
           <Sparkles style={{ width: 22, height: 22, color: '#fff' }} />
         </button>
       </div>
+
+      {/* ── Satellite/Map layers toggle — bottom-right ── */}
+      <button
+        type="button"
+        onClick={() => setTileType((t) => t === 'standard' ? 'satellite' : 'standard')}
+        style={{
+          position: 'absolute', right: 16, bottom: 148, zIndex: 50,
+          width: 44, height: 44, borderRadius: 10,
+          background: tileType === 'satellite' ? '#1e293b' : '#fff',
+          border: tileType === 'satellite' ? '2px solid #2563eb' : 'none',
+          cursor: 'pointer',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+          padding: 0,
+        }}
+        title={tileType === 'standard' ? 'Switch to Satellite' : 'Switch to Map'}
+      >
+        {/* Mini map preview icon */}
+        <div style={{
+          width: 28, height: 18, borderRadius: 3,
+          background: tileType === 'standard'
+            ? 'linear-gradient(135deg,#4ade80,#22d3ee,#818cf8)'
+            : 'linear-gradient(135deg,#e5e7eb,#d1d5db)',
+          border: '1.5px solid rgba(0,0,0,0.15)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {tileType === 'standard' ? (
+            // Satellite icon when in standard mode
+            <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg,rgba(0,0,0,0.1) 0,rgba(0,0,0,0.1) 1px,transparent 1px,transparent 4px)' }} />
+          ) : (
+            // Map icon when in satellite mode
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <div style={{ position: 'absolute', top: 6, left: 0, right: 0, height: 2, background: '#9ca3af' }} />
+              <div style={{ position: 'absolute', top: 11, left: 0, right: 0, height: 1, background: '#d1d5db' }} />
+            </div>
+          )}
+        </div>
+        <span style={{ fontSize: 8, fontWeight: 700, color: tileType === 'satellite' ? '#e2e8f0' : '#374151', fontFamily: 'inherit' }}>
+          {tileType === 'standard' ? 'SAT' : 'MAP'}
+        </span>
+      </button>
 
       {/* ── Location button — fixed bottom-right, always visible ── */}
       <button

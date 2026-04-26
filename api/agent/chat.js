@@ -244,8 +244,8 @@ module.exports = handler(async (req, res) => {
   let actionType  = null;
   let actionData  = null;
 
-  // Model preference order — haiku 4.5 first, fall back to 3.5 haiku
-  const MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
+  // Use confirmed-working 3.5 Haiku first; try 4.5 if available
+  const MODELS = ['claude-3-5-haiku-20241022', 'claude-haiku-4-5-20251001'];
 
   async function callAI(msgs) {
     for (const model of MODELS) {

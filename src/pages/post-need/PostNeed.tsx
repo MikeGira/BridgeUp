@@ -10,6 +10,17 @@ import type { NeedCategory } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/AppShell';
 
+// Gradient start/end colours used for category icon backgrounds
+const GRAD_COLORS: Record<string, [string, string]> = {
+  'from-orange-400 to-amber-500':   ['#fb923c', '#f59e0b'],
+  'from-blue-400 to-cyan-500':      ['#60a5fa', '#06b6d4'],
+  'from-violet-400 to-purple-500':  ['#a78bfa', '#a855f7'],
+  'from-red-400 to-rose-500':       ['#f87171', '#f43f5e'],
+  'from-teal-400 to-emerald-500':   ['#2dd4bf', '#10b981'],
+  'from-green-400 to-lime-500':     ['#4ade80', '#84cc16'],
+  'from-gray-400 to-slate-500':     ['#9ca3af', '#64748b'],
+};
+
 const CATEGORIES: { key: NeedCategory; icon: React.ComponentType<{ className?: string }>; label: string; desc: string; color: string }[] = [
   { key: 'food',       icon: UtensilsCrossed, label: 'Food & Water',  desc: 'Meals, groceries, nutrition',      color: 'from-orange-400 to-amber-500'  },
   { key: 'housing',    icon: Home,            label: 'Housing',       desc: 'Shelter, rent, emergency stay',    color: 'from-blue-400 to-cyan-500'     },
@@ -134,22 +145,36 @@ export default function PostNeed() {
             {/* Step: Category */}
             {step === 'category' && (
               <div>
-                <h2 className="text-2xl font-bold mb-1 text-gray-900">What do you need?</h2>
-                <p className="text-gray-500 text-[14px] mb-6">Select the type of help you're looking for</p>
-                <div className="grid grid-cols-2 gap-3">
+                <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px' }}>
+                  What do you need?
+                </h2>
+                <p style={{ margin: '0 0 20px', fontSize: 14, color: '#6b7280' }}>Select the type of help you're looking for</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {CATEGORIES.map(({ key, icon: Icon, label, desc, color }) => (
                     <button
                       key={key}
                       type="button"
                       onClick={() => { setCategory(key); setStep('details'); }}
-                      className={`flex flex-col p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${category === key ? 'border-primary shadow-md bg-primary/3' : 'border-gray-100 hover:border-primary/40 hover:shadow-sm bg-white'}`}
-                      style={{ boxShadow: category === key ? undefined : '0 1px 4px rgba(0,0,0,0.06)' }}
+                      style={{
+                        display: 'flex', flexDirection: 'column', padding: '14px 12px',
+                        borderRadius: 16, border: `2px solid ${category === key ? '#2563eb' : 'transparent'}`,
+                        background: '#fff', cursor: 'pointer', textAlign: 'left',
+                        boxShadow: category === key
+                          ? '0 0 0 3px rgba(37,99,235,0.12), 0 2px 12px rgba(0,0,0,0.08)'
+                          : '0 2px 10px rgba(0,0,0,0.07)',
+                        transition: 'border-color 0.15s, box-shadow 0.15s',
+                        fontFamily: 'inherit',
+                      }}
                     >
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3`}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 12, marginBottom: 10, flexShrink: 0,
+                        background: `linear-gradient(135deg, ${GRAD_COLORS[color]?.[0] ?? '#9ca3af'}, ${GRAD_COLORS[color]?.[1] ?? '#6b7280'})`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
                         <Icon className="w-5 h-5 text-white" />
                       </div>
-                      <span className="font-semibold text-[13px] text-gray-900">{label}</span>
-                      <span className="text-[11px] text-gray-400 mt-0.5 leading-snug">{desc}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', display: 'block', marginBottom: 2 }}>{label}</span>
+                      <span style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</span>
                     </button>
                   ))}
                 </div>

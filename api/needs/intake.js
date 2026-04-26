@@ -32,7 +32,7 @@ module.exports = handler(async (req, res) => {
 
   let reply, isComplete = false, needId = null;
 
-  const MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
+  const MODELS = ['claude-3-5-haiku-20241022', 'claude-haiku-4-5-20251001'];
   try {
     const ai = getClient();
     let response = null;
