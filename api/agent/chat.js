@@ -244,15 +244,38 @@ module.exports = handler(async (req, res) => {
   let actionType  = null;
   let actionData  = null;
 
+  // Model preference order — haiku 4.5 first, fall back to 3.5 haiku
+  const MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
+
+  async function callAI(msgs) {
+    for (const model of MODELS) {
+      try {
+        const r = await ai.messages.create({
+          model, max_tokens: 1024, system: SYSTEM, tools: TOOLS,
+          messages: msgs.slice(-14),
+        });
+        return r;
+      } catch (err) {
+        // model not found or not accessible → try next
+        if (err.status === 404 || err.status === 400) continue;
+        throw err; // other errors (auth, rate-limit) propagate
+      }
+    }
+    throw new Error('No available AI model.');
+  }
+
   // Agentic loop — max 3 rounds (keeps well inside Vercel 30s limit)
   for (let round = 0; round < 3; round++) {
-    const response = await ai.messages.create({
-      model:      'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system:     SYSTEM,
-      tools:      TOOLS,
-      messages:   messages.slice(-14), // keep last 14 turns for context
-    });
+    let response;
+    try {
+      response = await callAI(messages);
+    } catch (aiErr) {
+      console.error('[agent] AI call failed:', aiErr.status, aiErr.message);
+      finalReply = aiErr.status === 429
+        ? "I'm getting a lot of requests right now — please try again in a moment."
+        : "I couldn't connect to the AI service. Please use the form instead.";
+      break;
+    }
 
     if (response.stop_reason === 'end_turn') {
       finalReply = response.content.find(b => b.type === 'text')?.text || '';

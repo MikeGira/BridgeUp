@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   User, MapPin,
   UtensilsCrossed, Home as HomeIcon, Briefcase,
-  Heart, GraduationCap, Banknote, HelpCircle,
+  Heart, GraduationCap, Banknote,
   Navigation, Search, Sparkles,
 } from 'lucide-react';
 import { needsApi, matchesApi } from '@/lib/api';
@@ -13,21 +13,21 @@ import { AppShell } from '@/components/layout/AppShell';
 import { MapView } from '@/components/map/MapView';
 import { NeedCard } from '@/components/needs/NeedCard';
 
-type Category = 'all' | 'food' | 'housing' | 'employment' | 'medical' | 'training' | 'funding';
+// ─── Category filter pills (no "All" — redundant on a map view) ──────────────
+type Category = 'food' | 'housing' | 'employment' | 'medical' | 'training' | 'funding';
 
-const FILTER_PILLS: { key: Category; icon: React.ComponentType<{ style?: React.CSSProperties }>; label: string; color: string }[] = [
-  { key: 'all',        icon: HelpCircle,     label: 'All',        color: '#6b7280' },
-  { key: 'food',       icon: UtensilsCrossed, label: 'Food',      color: '#ea580c' },
-  { key: 'housing',    icon: HomeIcon,        label: 'Housing',   color: '#2563eb' },
-  { key: 'employment', icon: Briefcase,       label: 'Jobs',      color: '#7c3aed' },
-  { key: 'medical',    icon: Heart,           label: 'Medical',   color: '#e11d48' },
-  { key: 'training',   icon: GraduationCap,   label: 'Training',  color: '#0d9488' },
-  { key: 'funding',    icon: Banknote,        label: 'Funding',   color: '#16a34a' },
+const PILLS: { key: Category; icon: React.ComponentType<{ style?: React.CSSProperties }>; label: string; color: string }[] = [
+  { key: 'food',       icon: UtensilsCrossed, label: 'Food',     color: '#ea580c' },
+  { key: 'housing',    icon: HomeIcon,        label: 'Housing',  color: '#2563eb' },
+  { key: 'employment', icon: Briefcase,       label: 'Jobs',     color: '#7c3aed' },
+  { key: 'medical',    icon: Heart,           label: 'Medical',  color: '#e11d48' },
+  { key: 'training',   icon: GraduationCap,   label: 'Training', color: '#0d9488' },
+  { key: 'funding',    icon: Banknote,        label: 'Funding',  color: '#16a34a' },
 ];
 
 type SheetState = 'peek' | 'half' | 'full';
 const SHEET_HEIGHTS: Record<SheetState, string> = {
-  peek: '228px',
+  peek: '220px',
   half: '52vh',
   full: '88vh',
 };
@@ -37,7 +37,7 @@ export default function Home() {
   const { user } = useAuthStore();
   const [sheetState, setSheetState] = useState<SheetState>('peek');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [activeFilter, setActiveFilter] = useState<Category>('all');
+  const [activeFilter, setActiveFilter] = useState<Category | null>(null);
 
   const { data: needsData } = useQuery({
     queryKey: ['my-needs'],
@@ -59,143 +59,146 @@ export default function Home() {
     );
   }, []);
 
-  const allNeeds     = needsData?.needs ?? [];
-  const activeNeeds  = allNeeds.filter((n) => !['resolved', 'closed', 'cancelled'].includes(n.status));
+  const allNeeds      = needsData?.needs ?? [];
+  const activeNeeds   = allNeeds.filter((n) => !['resolved', 'closed', 'cancelled'].includes(n.status));
   const activeMatches = matchesData?.matches?.filter((m) => ['accepted', 'in_progress'].includes(m.status)) ?? [];
-  const latestNeed   = activeNeeds[0];
-  const latestMatch  = activeMatches[0];
+  const latestNeed    = activeNeeds[0];
+  const latestMatch   = activeMatches[0];
 
-  const filteredNeeds = activeFilter === 'all'
-    ? allNeeds
-    : allNeeds.filter((n) => n.category === activeFilter);
+  const mapNeeds = activeFilter ? allNeeds.filter((n) => n.category === activeFilter) : allNeeds;
+  const sheetH   = SHEET_HEIGHTS[sheetState];
 
-  const sheetH = SHEET_HEIGHTS[sheetState];
+  function geoLocate() {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    );
+  }
 
   return (
     <AppShell>
-      {/* Full-screen map — zIndex:0 creates an isolated stacking context so
-          Leaflet's internal z-indices (400–800) stay contained inside it,
-          letting our overlays (z-index 20–30) sit above the map. */}
+      {/* ── Full-screen map (zIndex:0 isolates Leaflet's internal z-indices) ── */}
       <div className="absolute inset-0" style={{ zIndex: 0 }}>
         <MapView
           center={userLocation ?? { lat: -1.9441, lng: 30.0619 }}
-          needs={filteredNeeds}
+          needs={mapNeeds}
           userLocation={userLocation}
         />
       </div>
 
-      {/* ── Top bar: search pill + profile avatar ── */}
-      <div className="absolute top-0 left-0 right-0 safe-area-top" style={{ zIndex: 50 }}>
-        <div className="flex items-center gap-2.5 px-4 pt-12 pb-2">
+      {/* ── TOP: Google Maps-style search bar + filter pills ── */}
+      <div
+        className="absolute top-0 left-0 right-0 safe-area-top"
+        style={{ zIndex: 50, pointerEvents: 'none' }}
+      >
+        {/* Search bar row */}
+        <div className="flex items-center gap-2 px-3 pt-12 pb-2" style={{ pointerEvents: 'auto' }}>
           <button
             type="button"
             onClick={() => navigate('/post-need')}
-            className="flex-1 flex items-center gap-3 bg-white rounded-full px-5 py-3.5 text-left active:scale-[0.98] transition-transform"
-            style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.13)' }}
+            className="flex-1 flex items-center gap-3 rounded-full text-left active:scale-[0.98] transition-transform"
+            style={{
+              background: '#fff',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+              padding: '12px 18px',
+              border: 'none', cursor: 'pointer',
+            }}
           >
-            <Search className="w-[18px] h-[18px] text-gray-400 flex-shrink-0" />
-            <span className="text-gray-400 text-[15px] select-none">Where do you need help?</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/profile')}
-            className="w-12 h-12 rounded-full bg-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
-            style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.13)' }}
-          >
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} className="w-10 h-10 rounded-full object-cover" alt="" />
-            ) : (
-              <User className="w-[18px] h-[18px] text-gray-600" />
-            )}
+            <Search style={{ width: 18, height: 18, color: '#9ca3af', flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 15, color: '#9ca3af', fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Where do you need help?
+            </span>
+            {/* Profile avatar inside search bar — like Google Maps */}
+            <div
+              onClick={(e) => { e.stopPropagation(); navigate('/profile'); }}
+              style={{
+                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg,#2563eb,#7c3aed)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} alt="" />
+              ) : (
+                <User style={{ width: 16, height: 16, color: '#fff' }} />
+              )}
+            </div>
           </button>
         </div>
 
-        {/* ── Category filter pills ── */}
-        <div className="px-4 pb-3">
-          <div
-            className="flex gap-2 overflow-x-auto"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {FILTER_PILLS.map(({ key, icon: Icon, label, color }) => {
-              const active = activeFilter === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveFilter(key)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold flex-shrink-0 transition-all active:scale-95"
-                  style={{
-                    background: active ? color : 'rgba(255,255,255,0.95)',
-                    color: active ? '#ffffff' : '#374151',
-                    boxShadow: '0 1px 8px rgba(0,0,0,0.12)',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                >
-                  <Icon style={{ width: 14, height: 14, color: active ? '#ffffff' : color, flexShrink: 0 }} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        {/* Filter pills row — horizontal scroll, no "All" */}
+        <div
+          style={{ display: 'flex', gap: 8, padding: '0 12px 10px', overflowX: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto' }}
+        >
+          {PILLS.map(({ key, icon: Icon, label, color }) => {
+            const active = activeFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveFilter(active ? null : key)}
+                className="flex items-center gap-1.5 flex-shrink-0 active:scale-95 transition-transform"
+                style={{
+                  padding: '7px 14px', borderRadius: 99, border: 'none', cursor: 'pointer',
+                  background: active ? color : 'rgba(255,255,255,0.96)',
+                  color: active ? '#fff' : '#374151',
+                  fontSize: 13, fontWeight: 600,
+                  boxShadow: '0 1px 6px rgba(0,0,0,0.12)',
+                  backdropFilter: 'blur(8px)',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+              >
+                <Icon style={{ width: 14, height: 14, color: active ? '#fff' : color, flexShrink: 0 }} />
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Location button — floats above bottom sheet ── */}
-      <button
-        type="button"
-        onClick={() => {
-          navigator.geolocation?.getCurrentPosition(
-            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            () => {}
-          );
-        }}
-        className="absolute right-4 w-12 h-12 rounded-full bg-white flex items-center justify-center active:scale-95"
-        style={{
-          zIndex: 50,
-          bottom: `calc(${sheetH} + 72px)`,
-          boxShadow: '0 2px 16px rgba(0,0,0,0.13)',
-          transition: 'bottom 300ms cubic-bezier(0.32,0.72,0,1)',
-        }}
-      >
-        <Navigation className="w-[18px] h-[18px] text-blue-600" />
-      </button>
-
-      {/* ── AI Assistant FAB — circular, pulsing, bottom-left ── */}
-      <div
-        className="absolute left-4"
-        style={{
-          zIndex: 50,
-          bottom: `calc(${sheetH} + 16px)`,
-          transition: 'bottom 300ms cubic-bezier(0.32,0.72,0,1)',
-        }}
-      >
+      {/* ── AI Assistant FAB — fixed bottom-left, always visible ── */}
+      <div style={{ position: 'absolute', left: 16, bottom: 90, zIndex: 50 }}>
         {/* Pulse ring */}
         <div style={{
-          position: 'absolute', inset: -6, borderRadius: '50%',
-          background: 'rgba(124,58,237,0.22)',
-          animation: 'bridge-ai-pulse 2s ease-in-out infinite',
+          position: 'absolute', inset: -8, borderRadius: '50%',
+          background: 'rgba(124,58,237,0.2)',
+          animation: 'bridge-ai-pulse 2.5s ease-in-out infinite',
+          pointerEvents: 'none',
         }} />
         <button
           type="button"
           onClick={() => navigate('/intake')}
-          className="relative flex items-center justify-center active:scale-90 transition-transform"
           style={{
-            width: 56, height: 56, borderRadius: '50%',
+            position: 'relative', width: 52, height: 52, borderRadius: '50%',
             background: 'linear-gradient(135deg,#2563eb,#7c3aed)',
-            boxShadow: '0 4px 20px rgba(124,58,237,0.55)',
             border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(124,58,237,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'transform 0.15s',
           }}
           title="Bridge AI Assistant"
+          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.9)')}
+          onMouseUp={(e)   => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <Sparkles style={{ width: 24, height: 24, color: '#fff' }} />
+          <Sparkles style={{ width: 22, height: 22, color: '#fff' }} />
         </button>
-        <style>{`
-          @keyframes bridge-ai-pulse {
-            0%, 100% { transform: scale(1); opacity: 0.7; }
-            50%       { transform: scale(1.35); opacity: 0; }
-          }
-        `}</style>
       </div>
+
+      {/* ── Location button — fixed bottom-right, always visible ── */}
+      <button
+        type="button"
+        onClick={geoLocate}
+        style={{
+          position: 'absolute', right: 16, bottom: 90, zIndex: 50,
+          width: 44, height: 44, borderRadius: '50%',
+          background: '#fff', border: 'none', cursor: 'pointer',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.13)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <Navigation style={{ width: 18, height: 18, color: '#2563eb' }} />
+      </button>
 
       {/* ── Bottom sheet ── */}
       <div
@@ -216,17 +219,17 @@ export default function Home() {
           onClick={() => setSheetState((s) => s === 'peek' ? 'half' : s === 'half' ? 'full' : 'peek')}
           aria-label="Toggle sheet"
         >
-          <div className="w-9 h-[3.5px] rounded-full bg-gray-200" />
+          <div style={{ width: 36, height: 3.5, borderRadius: 2, background: '#e5e7eb' }} />
         </button>
 
-        <div className="overflow-y-auto flex-1 pb-6 px-5">
+        <div className="overflow-y-auto flex-1 pb-6 px-4">
           {/* Greeting */}
           <div className="flex items-center justify-between mb-4 mt-1">
             <div>
-              <h2 className="text-[20px] font-bold text-gray-900 tracking-tight leading-tight">
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
                 {user?.displayName ? `Hi, ${user.displayName.split(' ')[0]}` : 'Welcome back'}
               </h2>
-              <p className="text-[13px] text-gray-500 mt-0.5">
+              <p style={{ margin: '3px 0 0', fontSize: 13, color: '#6b7280' }}>
                 {activeNeeds.length > 0
                   ? `${activeNeeds.length} active request${activeNeeds.length > 1 ? 's' : ''}`
                   : 'What do you need today?'}
@@ -236,33 +239,38 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => navigate('/matches')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                style={{ background: '#dcfce7' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
+                  borderRadius: 99, border: 'none', background: '#dcfce7', cursor: 'pointer',
+                }}
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                <span className="text-[12px] font-semibold text-green-700">{activeMatches.length} active</span>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>{activeMatches.length} active</span>
               </button>
             )}
           </div>
 
-          {/* Category grid */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            {[
+          {/* Category grid — 4 across, Uber style */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+            {([
               { key: 'food',       icon: UtensilsCrossed, label: 'Food',    bg: '#fff4ed', color: '#ea580c' },
               { key: 'housing',    icon: HomeIcon,        label: 'Housing', bg: '#eff6ff', color: '#2563eb' },
               { key: 'employment', icon: Briefcase,       label: 'Jobs',    bg: '#f5f3ff', color: '#7c3aed' },
               { key: 'medical',    icon: Heart,           label: 'Medical', bg: '#fff1f2', color: '#e11d48' },
-            ].map(({ key, icon: Icon, label, bg, color }) => (
+            ] as const).map(({ key, icon: Icon, label, bg, color }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => navigate(`/post-need?category=${key}`)}
-                className="flex flex-col items-center gap-2 active:scale-95 transition-transform"
+                style={{ all: 'unset', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
               >
-                <div className="w-[58px] h-[58px] rounded-[18px] flex items-center justify-center" style={{ background: bg }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: 18,
+                  background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
                   <Icon style={{ width: 26, height: 26, color }} strokeWidth={1.8} />
                 </div>
-                <span className="text-[11px] font-semibold text-gray-700 leading-none">{label}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#374151' }}>{label}</span>
               </button>
             ))}
           </div>
@@ -272,45 +280,61 @@ export default function Home() {
             <button
               type="button"
               onClick={() => navigate(`/matches/${latestMatch.id}`)}
-              className="w-full mb-3 p-4 rounded-2xl text-left active:scale-[0.98] transition-transform"
-              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}
+              style={{
+                all: 'unset', cursor: 'pointer', display: 'block',
+                width: '100%', marginBottom: 10,
+              }}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#dcfce7' }}>
+              <div style={{
+                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16, padding: '12px 14px',
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Navigation style={{ width: 18, height: 18, color: '#16a34a' }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[13px] text-gray-900">Helper on the way</p>
-                  <p className="text-[12px] text-gray-500 truncate">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#166534' }}>Helper on the way</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a' }}>
                     {latestMatch.distanceKm ? `${latestMatch.distanceKm.toFixed(1)} km away` : 'Tracking…'}
                   </p>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
-                  Live
-                </span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#16a34a', background: '#dcfce7', borderRadius: 99, padding: '3px 8px' }}>LIVE</span>
               </div>
             </button>
           )}
 
           {/* Latest active need */}
           {latestNeed && !latestMatch && (
-            <button type="button" onClick={() => navigate(`/needs/${latestNeed.id}`)} className="w-full mb-3">
+            <button
+              type="button"
+              onClick={() => navigate(`/needs/${latestNeed.id}`)}
+              style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', marginBottom: 10 }}
+            >
               <NeedCard need={latestNeed} compact />
             </button>
           )}
 
-          {/* Recent requests (half/full only) */}
+          {/* Requests list (half / full state) */}
           {activeNeeds.length > 0 && sheetState !== 'peek' && (
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-[13px] text-gray-900">Your requests</h3>
-                <button type="button" onClick={() => navigate('/needs')} className="text-[12px] font-semibold text-blue-600">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Your requests</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/needs')}
+                  style={{ background: 'none', border: 'none', fontSize: 12, fontWeight: 700, color: '#2563eb', cursor: 'pointer' }}
+                >
                   See all
                 </button>
               </div>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {activeNeeds.slice(0, 3).map((need) => (
-                  <button key={need.id} type="button" onClick={() => navigate(`/needs/${need.id}`)} className="w-full">
+                  <button
+                    key={need.id}
+                    type="button"
+                    onClick={() => navigate(`/needs/${need.id}`)}
+                    style={{ all: 'unset', cursor: 'pointer', display: 'block' }}
+                  >
                     <NeedCard need={need} compact />
                   </button>
                 ))}
@@ -318,27 +342,39 @@ export default function Home() {
             </div>
           )}
 
-          {/* Empty state (half/full only) */}
+          {/* Empty state (half / full) */}
           {activeNeeds.length === 0 && sheetState !== 'peek' && (
-            <div className="text-center py-6">
-              <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center mb-3" style={{ background: '#f3f4f6' }}>
-                <MapPin style={{ width: 22, height: 22, color: '#9ca3af' }} />
+            <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: '#f3f4f6', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MapPin style={{ width: 20, height: 20, color: '#9ca3af' }} />
               </div>
-              <p className="font-semibold text-[13px] text-gray-900 mb-1">No active requests</p>
-              <p className="text-[12px] text-gray-500 mb-4">Tap the search bar or use AI Help to get started</p>
+              <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#111827' }}>No active requests</p>
+              <p style={{ margin: '0 0 16px', fontSize: 12, color: '#6b7280' }}>Tap the search bar or ask the AI agent</p>
               <button
                 type="button"
                 onClick={() => navigate('/intake')}
-                className="flex items-center gap-2 mx-auto px-5 py-2.5 rounded-full text-[13px] font-bold text-white"
-                style={{ background: 'linear-gradient(135deg,#2563eb,#7c3aed)' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto',
+                  padding: '10px 20px', borderRadius: 99, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff',
+                  fontSize: 13, fontWeight: 700,
+                }}
               >
-                <Sparkles style={{ width: 15, height: 15 }} />
-                Ask AI Assistant
+                <Sparkles style={{ width: 14, height: 14 }} />
+                Ask Bridge AI
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes bridge-ai-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50%       { transform: scale(1.4); opacity: 0; }
+        }
+      `}</style>
     </AppShell>
   );
 }

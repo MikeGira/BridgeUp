@@ -32,17 +32,25 @@ module.exports = handler(async (req, res) => {
 
   let reply, isComplete = false, needId = null;
 
+  const MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
   try {
     const ai = getClient();
-    const response = await ai.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: SYSTEM,
-      messages: messages.slice(-10),
-    });
-    reply = response.content[0].text;
+    let response = null;
+    for (const model of MODELS) {
+      try {
+        response = await ai.messages.create({
+          model, max_tokens: 500, system: SYSTEM,
+          messages: messages.slice(-10),
+        });
+        break;
+      } catch (modelErr) {
+        if (modelErr.status === 404 || modelErr.status === 400) continue;
+        throw modelErr;
+      }
+    }
+    reply = response?.content[0]?.text || 'Could you say that again in a few words?';
   } catch (err) {
-    console.error('[intake] AI error:', err.status || err.message, err.error || '');
+    console.error('[intake] AI error:', err.status || err.message);
     const is503 = err.status === 503 || (err.message || '').includes('not configured');
     reply = is503
       ? 'AI assistant is not available right now. Please use the form to post your need.'
