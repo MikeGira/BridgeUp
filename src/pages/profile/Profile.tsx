@@ -1,20 +1,29 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { ChevronLeft, LogOut, Edit2, Save, Loader2, Shield, Globe, Phone } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
+import {
+  ChevronLeft, Edit2, Save, Loader2,
+  Shield, Globe, Phone, LogOut, Check,
+} from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AppShell } from '@/components/layout/AppShell';
 
-const ROLE_META: Record<string, { label: string; color: string }> = {
-  user:       { label: 'Member',       color: 'bg-blue-100 text-blue-700'    },
-  helper:     { label: 'Helper',       color: 'bg-green-100 text-green-700'  },
-  admin:      { label: 'Admin',        color: 'bg-violet-100 text-violet-700'},
-  ngo:        { label: 'NGO',          color: 'bg-teal-100 text-teal-700'    },
-  superadmin: { label: 'Super Admin',  color: 'bg-red-100 text-red-700'      },
+const ROLE_LABELS: Record<string, string> = {
+  user:       'Member',
+  helper:     'Helper',
+  admin:      'Admin',
+  ngo:        'NGO',
+  superadmin: 'Super Admin',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  user:       '#2563eb',
+  helper:     '#16a34a',
+  admin:      '#7c3aed',
+  ngo:        '#0d9488',
+  superadmin: '#dc2626',
 };
 
 const LANGUAGES = [
@@ -31,10 +40,10 @@ export default function Profile() {
   const { user, logout, setUser } = useAuthStore();
   const { toast } = useToast();
 
-  const [editing, setEditing] = useState(false);
+  const [editing,     setEditing]     = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
-  const [bio, setBio] = useState(user?.bio ?? '');
-  const [language, setLanguage] = useState(user?.language ?? 'en');
+  const [bio,         setBio]         = useState(user?.bio ?? '');
+  const [language,    setLanguage]    = useState(user?.language ?? 'en');
 
   const updateMutation = useMutation({
     mutationFn: () => authApi.updateMe({ display_name: displayName, bio, language } as Parameters<typeof authApi.updateMe>[0]),
@@ -53,141 +62,234 @@ export default function Profile() {
 
   if (!user) return null;
 
-  const roleInfo = ROLE_META[user.role] || ROLE_META.user;
+  const initials = user.displayName
+    ? user.displayName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+    : user.phone.slice(-2);
+
+  const langLabel = LANGUAGES.find((l) => l.code === user.language)?.label ?? user.language;
 
   return (
     <AppShell>
-      <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="bu-page">
-        <div className="flex items-center gap-3 px-5 pt-12 pb-4">
-          <button type="button" onClick={() => navigate('/home')} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-bold flex-1 text-gray-900">Profile</h1>
-          <button
-            type="button"
-            onClick={() => setEditing((e) => !e)}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
-        </div>
+      <div style={{ minHeight: '100%', background: '#f4f4f6', overflowY: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="bu-page" style={{ padding: '0 16px 40px' }}>
 
-        <div className="px-5 pb-8 space-y-4">
-          {/* Avatar + name */}
-          <div className="flex items-center gap-4 p-5 bg-card rounded-2xl border border-border">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
-              {user.displayName?.[0]?.toUpperCase() ?? user.phone.slice(-2)}
-            </div>
-            <div className="flex-1 min-w-0">
-              {editing ? (
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
-                  maxLength={100}
-                  className="w-full text-lg font-bold bg-transparent border-b border-primary focus:outline-none pb-0.5"
-                />
-              ) : (
-                <p className="text-xl font-bold">{user.displayName || 'Your Name'}</p>
-              )}
-              <div className="flex items-center gap-2 mt-1.5">
-                <Badge className={`${roleInfo.color} border-0 text-xs`}>{roleInfo.label}</Badge>
-                {user.country && <span className="text-xs text-muted-foreground">{user.country}</span>}
-              </div>
-            </div>
+          {/* ── Header bar ── */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '48px 0 20px', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => navigate('/home')}
+              style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <ChevronLeft style={{ width: 18, height: 18, color: '#374151' }} />
+            </button>
+            <h1 style={{ flex: 1, margin: 0, fontSize: 20, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px' }}>
+              Account
+            </h1>
+            <button
+              type="button"
+              onClick={() => setEditing((e) => !e)}
+              style={{
+                padding: '7px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                background: editing ? '#eff6ff' : '#e5e7eb',
+                color: editing ? '#2563eb' : '#374151',
+                fontSize: 12, fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              {editing ? <><Check style={{ width: 13, height: 13 }} />Done</> : <><Edit2 style={{ width: 13, height: 13 }} />Edit</>}
+            </button>
           </div>
 
-          {/* Bio */}
-          <div className="p-4 bg-card rounded-2xl border border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">About</p>
+          {/* ── Avatar + name card ── */}
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px 24px',
+            boxShadow: '0 2px 16px rgba(0,0,0,0.07)', marginBottom: 16,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+          }}>
+            {/* Avatar */}
+            <div style={{
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, fontWeight: 800, color: '#fff',
+              marginBottom: 14, boxShadow: '0 4px 20px rgba(37,99,235,0.3)',
+            }}>
+              {initials}
+            </div>
+
+            {/* Name */}
             {editing ? (
-              <textarea
-                rows={3}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell the community a bit about yourself…"
-                maxLength={500}
-                className="w-full text-sm bg-transparent border border-border rounded-xl p-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                maxLength={100}
+                style={{
+                  fontSize: 20, fontWeight: 700, color: '#111827',
+                  border: 'none', borderBottom: '2px solid #2563eb',
+                  background: 'transparent', outline: 'none', textAlign: 'center',
+                  width: '100%', marginBottom: 8, padding: '4px 0',
+                  fontFamily: 'inherit',
+                }}
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{user.bio || 'No bio yet'}</p>
+              <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.3px' }}>
+                {user.displayName || 'Your Name'}
+              </p>
             )}
-          </div>
 
-          {/* Contact */}
-          <div className="p-4 bg-card rounded-2xl border border-border space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</p>
-            <div className="flex items-center gap-3">
-              <Phone className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">{user.phone.slice(0, 4)}****{user.phone.slice(-4)}</span>
-              <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">Verified</Badge>
+            {/* Role badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
+                background: `${ROLE_COLORS[user.role] || '#2563eb'}18`,
+                color: ROLE_COLORS[user.role] || '#2563eb',
+              }}>
+                {ROLE_LABELS[user.role] || 'Member'}
+              </span>
+              {user.country && (
+                <span style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>{user.country}</span>
+              )}
             </div>
           </div>
 
-          {/* Language */}
-          <div className="p-4 bg-card rounded-2xl border border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Language</p>
-            {editing ? (
-              <div className="grid grid-cols-2 gap-2">
-                {LANGUAGES.map((lang) => (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    onClick={() => setLanguage(lang.code)}
-                    className={`px-3 py-2 rounded-xl text-sm text-left transition-colors ${language === lang.code ? 'bg-primary text-white' : 'bg-muted hover:bg-muted/80'}`}
-                  >
-                    {lang.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">{LANGUAGES.find((l) => l.code === user.language)?.label ?? user.language}</span>
-              </div>
-            )}
-          </div>
+          {/* ── Info card ── */}
+          <div style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', marginBottom: 16 }}>
 
-          {/* Security */}
-          <div className="p-4 bg-card rounded-2xl border border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Security</p>
-            <div className="flex items-center gap-3">
-              <Shield className="w-4 h-4 text-green-600" />
-              <span className="text-sm flex-1">Phone-based auth enabled</span>
-              <span className="text-xs text-green-600 font-medium">Active</span>
+            {/* Bio row */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                About
+              </p>
+              {editing ? (
+                <textarea
+                  rows={3}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell the community about yourself…"
+                  maxLength={500}
+                  style={{
+                    width: '100%', resize: 'none', background: '#f9fafb', border: '1.5px solid #e5e7eb',
+                    borderRadius: 12, padding: '8px 12px', fontSize: 13, color: '#111827',
+                    fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              ) : (
+                <p style={{ margin: 0, fontSize: 14, color: user.bio ? '#374151' : '#9ca3af' }}>
+                  {user.bio || 'No bio yet — tap Edit to add one'}
+                </p>
+              )}
+            </div>
+
+            {/* Phone row */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Phone style={{ width: 16, height: 16, color: '#2563eb' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Phone</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111827' }}>
+                  {user.phone.slice(0, 4)}****{user.phone.slice(-4)}
+                </p>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: '#dcfce7', borderRadius: 99, padding: '3px 10px' }}>
+                Verified
+              </span>
+            </div>
+
+            {/* Language row */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: editing ? 12 : 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Globe style={{ width: 16, height: 16, color: '#7c3aed' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Language</p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111827' }}>{langLabel}</p>
+                </div>
+              </div>
+              {editing && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => setLanguage(lang.code)}
+                      style={{
+                        padding: '9px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                        background: language === lang.code ? '#2563eb' : '#f3f4f6',
+                        color: language === lang.code ? '#fff' : '#374151',
+                        fontSize: 13, fontWeight: 600, textAlign: 'left',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Security row */}
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Shield style={{ width: 16, height: 16, color: '#16a34a' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Security</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111827' }}>Phone-based auth</p>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>Active</span>
             </div>
           </div>
 
           {/* Member since */}
           {user.memberSince && (
-            <p className="text-xs text-center text-muted-foreground">
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', margin: '0 0 16px' }}>
               Member since {new Date(user.memberSince).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
             </p>
           )}
 
-          {/* Save / Logout */}
+          {/* ── Save / Sign out ── */}
           {editing ? (
-            <Button
-              className="w-full h-12 rounded-xl"
+            <button
+              type="button"
               onClick={() => updateMutation.mutate()}
               disabled={updateMutation.isPending}
+              style={{
+                width: '100%', height: 52, borderRadius: 14, border: 'none',
+                background: '#000', color: '#fff', fontSize: 15, fontWeight: 700,
+                cursor: updateMutation.isPending ? 'default' : 'pointer',
+                opacity: updateMutation.isPending ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                fontFamily: 'inherit',
+              }}
             >
-              {updateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save changes</>}
-            </Button>
+              {updateMutation.isPending
+                ? <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />Saving…</>
+                : <><Save style={{ width: 16, height: 16 }} />Save changes</>}
+            </button>
           ) : (
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-xl text-red-600 border-red-200 hover:bg-red-50"
+            <button
+              type="button"
               onClick={() => void handleLogout()}
+              style={{
+                width: '100%', height: 52, borderRadius: 14,
+                border: '1.5px solid #fecaca', background: '#fff',
+                color: '#dc2626', fontSize: 15, fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                fontFamily: 'inherit',
+              }}
             >
-              <LogOut className="w-4 h-4 mr-2" />Sign out
-            </Button>
+              <LogOut style={{ width: 16, height: 16 }} />
+              Sign out
+            </button>
           )}
         </div>
-        </div>{/* bu-page */}
       </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </AppShell>
   );
 }

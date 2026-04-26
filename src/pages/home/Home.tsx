@@ -73,8 +73,10 @@ export default function Home() {
 
   return (
     <AppShell>
-      {/* Full-screen map */}
-      <div className="absolute inset-0">
+      {/* Full-screen map — zIndex:0 creates an isolated stacking context so
+          Leaflet's internal z-indices (400–800) stay contained inside it,
+          letting our overlays (z-index 20–30) sit above the map. */}
+      <div className="absolute inset-0" style={{ zIndex: 0 }}>
         <MapView
           center={userLocation ?? { lat: -1.9441, lng: 30.0619 }}
           needs={filteredNeeds}
@@ -83,7 +85,7 @@ export default function Home() {
       </div>
 
       {/* ── Top bar: search pill + profile avatar ── */}
-      <div className="absolute top-0 left-0 right-0 z-20 safe-area-top">
+      <div className="absolute top-0 left-0 right-0 safe-area-top" style={{ zIndex: 50 }}>
         <div className="flex items-center gap-2.5 px-4 pt-12 pb-2">
           <button
             type="button"
@@ -147,8 +149,9 @@ export default function Home() {
             () => {}
           );
         }}
-        className="absolute right-4 z-20 w-12 h-12 rounded-full bg-white flex items-center justify-center active:scale-95"
+        className="absolute right-4 w-12 h-12 rounded-full bg-white flex items-center justify-center active:scale-95"
         style={{
+          zIndex: 50,
           bottom: `calc(${sheetH} + 72px)`,
           boxShadow: '0 2px 16px rgba(0,0,0,0.13)',
           transition: 'bottom 300ms cubic-bezier(0.32,0.72,0,1)',
@@ -159,8 +162,9 @@ export default function Home() {
 
       {/* ── AI Assistant FAB — circular, pulsing, bottom-left ── */}
       <div
-        className="absolute left-4 z-20"
+        className="absolute left-4"
         style={{
+          zIndex: 50,
           bottom: `calc(${sheetH} + 16px)`,
           transition: 'bottom 300ms cubic-bezier(0.32,0.72,0,1)',
         }}
@@ -195,8 +199,9 @@ export default function Home() {
 
       {/* ── Bottom sheet ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-30 bg-white rounded-t-[28px]"
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px]"
         style={{
+          zIndex: 60,
           height: sheetH,
           boxShadow: '0 -4px 32px rgba(0,0,0,0.12)',
           transition: 'height 300ms cubic-bezier(0.32,0.72,0,1)',
