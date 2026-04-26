@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Full-bleed background for maskable icon (safe zone is centre 80%) -->
+  <rect width="512" height="512" fill="#2563EB"/>
+  <!-- Lightning bolt centred in safe zone -->
+  <g transform="translate(150, 95) scale(8.8)">
+    <path d="M13 10V3L4 14h7v7l9-11h-7z"
+          fill="white"
+          stroke="white"
+          stroke-width="0.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+</svg>

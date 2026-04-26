@@ -1,0 +1,52 @@
+{
+  "name": "BridgeUp",
+  "short_name": "BridgeUp",
+  "description": "Connect people in need with verified helpers instantly, safely, anywhere.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
+  "lang": "en",
+  "categories": ["social", "utilities", "health"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Get Help Now",
+      "short_name": "Get Help",
+      "description": "Post a new help request",
+      "url": "/post-need",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "AI Assistant",
+      "short_name": "Bridge AI",
+      "description": "Chat with the BridgeUp AI agent",
+      "url": "/intake",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "My Requests",
+      "short_name": "My Needs",
+      "description": "View your help requests",
+      "url": "/needs",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    }
+  ],
+  "prefer_related_applications": false
+}
