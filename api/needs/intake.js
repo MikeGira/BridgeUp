@@ -6,7 +6,7 @@ const Anthropic    = require('@anthropic-ai/sdk');
 function getClient() {
   const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   if (!key) throw Object.assign(new Error('AI not configured.'), { status: 503 });
-  return new Anthropic({ apiKey: key });
+  return new Anthropic({ apiKey: key, timeout: 8000 });
 }
 
 const SYSTEM = `You are BridgeUp's compassionate intake assistant. Help people in crisis describe their needs.

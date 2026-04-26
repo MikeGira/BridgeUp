@@ -29,7 +29,8 @@ module.exports = handler(async (req, res) => {
     }
 
     const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey: key });
+    // timeout: 8000 ensures the SDK throws before Vercel's 10s function kill
+    const client = new Anthropic({ apiKey: key, timeout: 8000 });
     const MODELS = ['claude-3-5-haiku-20241022', 'claude-haiku-4-5-20251001'];
 
     for (const model of MODELS) {

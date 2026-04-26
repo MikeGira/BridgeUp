@@ -9,7 +9,8 @@ const Anthropic        = require('@anthropic-ai/sdk');
 function getAI() {
   const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   if (!key) throw Object.assign(new Error('AI not configured.'), { status: 503 });
-  return new Anthropic({ apiKey: key });
+  // timeout: 7000 prevents Vercel's 10s function kill from leaving a silent crash
+  return new Anthropic({ apiKey: key, timeout: 7000 });
 }
 
 // ─── System prompt ────────────────────────────────────────────────────────────
@@ -251,7 +252,7 @@ module.exports = handler(async (req, res) => {
     for (const model of MODELS) {
       try {
         const r = await ai.messages.create({
-          model, max_tokens: 1024, system: SYSTEM, tools: TOOLS,
+          model, max_tokens: 512, system: SYSTEM, tools: TOOLS,
           messages: msgs.slice(-14),
         });
         return r;
@@ -264,8 +265,13 @@ module.exports = handler(async (req, res) => {
     throw new Error('No available AI model.');
   }
 
-  // Agentic loop — max 3 rounds (keeps well inside Vercel 30s limit)
-  for (let round = 0; round < 3; round++) {
+  // Vercel Hobby caps functions at 10s; allow max 2 rounds with a 7s wall-clock guard
+  const agentStart = Date.now();
+  for (let round = 0; round < 2; round++) {
+    if (Date.now() - agentStart > 7000) {
+      finalReply = "I'm still processing your request. Please send your message again.";
+      break;
+    }
     let response;
     try {
       response = await callAI(messages);
