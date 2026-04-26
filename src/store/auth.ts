@@ -15,14 +15,49 @@ interface AuthState {
   refresh:  () => Promise<void>;
 }
 
-// localStorage persists across refreshes and app restarts on mobile
 const TOKEN_KEY = 'bridgeup_token';
+const USER_KEY  = 'bridgeup_user';
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user:          null,
-  token:         localStorage.getItem(TOKEN_KEY),
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function readToken(): string | null {
+  // Also migrate from old sessionStorage (one-time, for users who logged in before the localStorage switch)
+  const lt = localStorage.getItem(TOKEN_KEY);
+  if (lt) return lt;
+  const st = sessionStorage.getItem(TOKEN_KEY);
+  if (st) {
+    localStorage.setItem(TOKEN_KEY, st);
+    sessionStorage.removeItem(TOKEN_KEY);
+    return st;
+  }
+  return null;
+}
+
+function readUser(): User | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveUser(user: User): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+function clearStorage(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+// ─── Store ────────────────────────────────────────────────────────────────────
+export const useAuthStore = create<AuthState>((set) => ({
+  // Both token and user are read from localStorage immediately on startup.
+  // isInitialized starts true so ProtectedRoute never shows PageLoader on refresh.
+  user:          readUser(),
+  token:         readToken(),
   isLoading:     false,
-  isInitialized: false,
+  isInitialized: true,
 
   setUser:  (user)  => set({ user }),
   setToken: (token) => {
@@ -33,40 +68,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: (token, user) => {
     localStorage.setItem(TOKEN_KEY, token);
+    saveUser(user);
     set({ token, user, isInitialized: true });
   },
 
   logout: async () => {
     try { await authApi.logout(); } catch { /* always clear locally */ }
-    localStorage.removeItem(TOKEN_KEY);
+    clearStorage();
     set({ token: null, user: null });
   },
 
+  // Background token validation — runs once on app mount.
+  // Does NOT block the UI or clear the user on network errors.
   refresh: async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = readToken();
     if (!token) {
-      set({ user: null, token: null, isInitialized: true, isLoading: false });
+      clearStorage();
+      set({ user: null, token: null, isInitialized: true });
       return;
     }
-    // Already hydrated from login() — skip the network round-trip
-    if (get().user) {
-      set({ isInitialized: true });
-      return;
-    }
-    set({ isLoading: true });
     try {
       const { user } = await authApi.me();
-      set({ user, token, isInitialized: true, isLoading: false });
+      saveUser(user);
+      set({ user, token, isInitialized: true });
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
       if (status === 401 || status === 403) {
-        // Auth error — clear the invalid token
-        localStorage.removeItem(TOKEN_KEY);
-        set({ user: null, token: null, isInitialized: true, isLoading: false });
-      } else {
-        // Network/server error — keep token, don't sign out
-        set({ isInitialized: true, isLoading: false });
+        // Real auth failure — sign out
+        clearStorage();
+        set({ user: null, token: null, isInitialized: true });
       }
+      // Network / 5xx: keep the cached user — app stays fully usable
     }
   },
 }));

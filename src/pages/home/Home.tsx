@@ -157,21 +157,41 @@ export default function Home() {
         <Navigation className="w-[18px] h-[18px] text-blue-600" />
       </button>
 
-      {/* ── AI Assistant FAB ── */}
-      <button
-        type="button"
-        onClick={() => navigate('/intake')}
-        className="absolute right-4 z-20 flex items-center gap-2 rounded-full px-4 py-3 active:scale-95 transition-all"
+      {/* ── AI Assistant FAB — circular, pulsing, bottom-left ── */}
+      <div
+        className="absolute left-4 z-20"
         style={{
           bottom: `calc(${sheetH} + 16px)`,
-          background: 'linear-gradient(135deg,#2563eb,#7c3aed)',
-          boxShadow: '0 4px 20px rgba(37,99,235,0.45)',
           transition: 'bottom 300ms cubic-bezier(0.32,0.72,0,1)',
         }}
       >
-        <Sparkles style={{ width: 18, height: 18, color: '#fff', flexShrink: 0 }} />
-        <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '-0.1px' }}>AI Help</span>
-      </button>
+        {/* Pulse ring */}
+        <div style={{
+          position: 'absolute', inset: -6, borderRadius: '50%',
+          background: 'rgba(124,58,237,0.22)',
+          animation: 'bridge-ai-pulse 2s ease-in-out infinite',
+        }} />
+        <button
+          type="button"
+          onClick={() => navigate('/intake')}
+          className="relative flex items-center justify-center active:scale-90 transition-transform"
+          style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'linear-gradient(135deg,#2563eb,#7c3aed)',
+            boxShadow: '0 4px 20px rgba(124,58,237,0.55)',
+            border: 'none', cursor: 'pointer',
+          }}
+          title="Bridge AI Assistant"
+        >
+          <Sparkles style={{ width: 24, height: 24, color: '#fff' }} />
+        </button>
+        <style>{`
+          @keyframes bridge-ai-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50%       { transform: scale(1.35); opacity: 0; }
+          }
+        `}</style>
+      </div>
 
       {/* ── Bottom sheet ── */}
       <div

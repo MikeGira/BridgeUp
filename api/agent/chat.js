@@ -233,13 +233,19 @@ module.exports = handler(async (req, res) => {
   const history = session?.conversation_history || [];
   const messages = [...history, { role: 'user', content: message.trim() }];
 
-  const ai = getAI();
+  let ai;
+  try {
+    ai = getAI();
+  } catch {
+    return res.status(503).json({ error: 'AI service not configured. Set ANTHROPIC_API_KEY in Vercel and redeploy.' });
+  }
+
   let finalReply  = null;
   let actionType  = null;
   let actionData  = null;
 
-  // Agentic loop — max 4 rounds to handle tool chains
-  for (let round = 0; round < 4; round++) {
+  // Agentic loop — max 3 rounds (keeps well inside Vercel 30s limit)
+  for (let round = 0; round < 3; round++) {
     const response = await ai.messages.create({
       model:      'claude-haiku-4-5-20251001',
       max_tokens: 1024,

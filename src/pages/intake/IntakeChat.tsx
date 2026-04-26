@@ -202,10 +202,16 @@ export default function IntakeChat() {
       setMessages((m) => [...m, msg]);
 
       if (res.action === 'task_complete') setDone(true);
-    } catch {
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      const errorMsg = status === 503
+        ? "I'm not available right now (AI service starting up). Please try again in a moment, or tap \"Use form\" above to post your need directly."
+        : status === 429
+        ? "I'm getting a lot of messages right now. Please wait a moment and try again."
+        : "I had a brief connection issue — please try again. Or tap \"Use form\" above.";
       setMessages((m) => [...m, {
         role:    'assistant',
-        content: 'I had a brief issue — please try again. If this keeps happening, use the form instead.',
+        content: errorMsg,
         ts:      new Date().toISOString(),
       }]);
     } finally {
