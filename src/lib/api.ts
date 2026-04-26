@@ -77,6 +77,12 @@ export const helpersApi = {
   register: (data: unknown) => api.post<{ success: boolean }>('/helpers/register', data),
 };
 
+// ─── AI Agent ─────────────────────────────────────────────────────────────────
+export const agentApi = {
+  chat: (sessionId: string, message: string) =>
+    api.post<AgentResponse>('/agent/chat', { sessionId, message }),
+};
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
 export const adminApi = {
   dashboard:  () => api.get<AdminDashboard>('/admin/dashboard'),
@@ -213,4 +219,27 @@ export interface AuditEntry {
   tenantId:  string | null;
   meta:      Record<string, unknown>;
   createdAt: string;
+}
+
+// ─── AI Agent types ───────────────────────────────────────────────────────────
+export interface AgentHelper {
+  id:               string;
+  organization:     string | null;
+  help_types:       string[];
+  location_address: string | null;
+  location_lat:     number | null;
+  location_lng:     number | null;
+  service_radius_km: number;
+  is_online:        boolean;
+  rating:           number;
+  total_resolved:   number;
+  user?: { display_name: string | null };
+}
+
+export type AgentAction = 'helpers_found' | 'need_created' | 'helper_contacted' | 'task_complete';
+
+export interface AgentResponse {
+  reply:   string;
+  action?: AgentAction;
+  data?:   AgentHelper[] | { needId: string } | { matchId?: string; helperName: string } | { summary: string; completedAt: string; outcome: string };
 }
