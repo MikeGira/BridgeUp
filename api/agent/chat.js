@@ -245,8 +245,8 @@ module.exports = handler(async (req, res) => {
   let actionType  = null;
   let actionData  = null;
 
-  // Use confirmed-working 3.5 Haiku first; try 4.5 if available
-  const MODELS = ['claude-3-5-haiku-20241022', 'claude-haiku-4-5-20251001'];
+  // claude-sonnet-4-6 is confirmed accessible on this API key
+  const MODELS = ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001'];
 
   async function callAI(msgs) {
     for (const model of MODELS) {

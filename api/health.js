@@ -18,7 +18,7 @@ module.exports = handler(async (req, res) => {
     },
   };
 
-  // ?ai=1 runs a live Anthropic connectivity test (takes ~2s)
+  // ?ai=1 runs a live Anthropic connectivity test using native fetch — no SDK dependency
   if (req.query?.ai === '1') {
     const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
     if (!key) {
@@ -28,34 +28,48 @@ module.exports = handler(async (req, res) => {
       });
     }
 
-    const Anthropic = require('@anthropic-ai/sdk');
-    // timeout: 8000 ensures the SDK throws before Vercel's 10s function kill
-    const client = new Anthropic({ apiKey: key, timeout: 8000 });
-    const MODELS = ['claude-3-5-haiku-20241022', 'claude-haiku-4-5-20251001'];
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
 
-    for (const model of MODELS) {
-      try {
-        const r = await client.messages.create({
-          model, max_tokens: 20,
-          messages: [{ role: 'user', content: 'Reply with only the word "ready".' }],
-        });
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key':         key,
+          'anthropic-version': '2023-06-01',
+          'content-type':      'application/json',
+        },
+        body: JSON.stringify({
+          model:     'claude-sonnet-4-6',
+          max_tokens: 20,
+          messages:  [{ role: 'user', content: 'Reply with only the word "ready".' }],
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+
+      if (r.ok) {
+        const data = await r.json();
         return res.json({
           ...base,
-          ai_test: { status: 'ok', model, reply: r.content[0]?.text?.trim() },
-        });
-      } catch (err) {
-        if (err.status === 404 || err.status === 400) continue;
-        return res.json({
-          ...base,
-          ai_test: { status: 'error', model, error: `HTTP ${err.status}: ${err.message}` },
+          ai_test: { status: 'ok', model: 'claude-sonnet-4-6', reply: data.content?.[0]?.text?.trim() },
         });
       }
-    }
 
-    return res.json({
-      ...base,
-      ai_test: { status: 'error', error: 'No accessible model found. Check API key permissions.' },
-    });
+      const errText = await r.text();
+      return res.json({
+        ...base,
+        ai_test: { status: 'error', httpStatus: r.status, error: errText.slice(0, 300) },
+      });
+    } catch (err) {
+      return res.json({
+        ...base,
+        ai_test: {
+          status: 'error',
+          error:  err.name === 'AbortError' ? 'timeout after 8s' : err.message,
+        },
+      });
+    }
   }
 
   res.json(base);
