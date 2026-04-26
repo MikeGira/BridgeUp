@@ -102,7 +102,7 @@ export default function PostNeed() {
 
   return (
     <AppShell hideNav>
-      <div className="flex flex-col h-full bg-background overflow-x-hidden">
+      <div className="flex flex-col h-full overflow-x-hidden" style={{ background: '#f4f4f6' }}>
         <div className="bu-page flex flex-col flex-1 overflow-hidden">
 
           {/* Header */}
@@ -129,7 +129,7 @@ export default function PostNeed() {
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 pb-4">
+          <div className="flex-1 overflow-y-auto px-5 pb-4" style={{ background: '#f4f4f6' }}>
 
             {/* Step: Category */}
             {step === 'category' && (

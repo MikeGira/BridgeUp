@@ -1,8 +1,7 @@
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { needsApi } from '@/lib/api';
-import { Button } from '@/components/ui/button';
 import { AppShell } from '@/components/layout/AppShell';
 import { NeedCard } from '@/components/needs/NeedCard';
 
@@ -15,79 +14,147 @@ export default function MyNeeds() {
     refetchInterval: 30_000,
   });
 
-  const needs = data?.needs ?? [];
+  const needs    = data?.needs ?? [];
   const active   = needs.filter((n) => !['resolved', 'closed', 'cancelled'].includes(n.status));
   const resolved = needs.filter((n) => ['resolved', 'closed'].includes(n.status));
 
   return (
     <AppShell>
-      <div className="flex flex-col h-full bg-background overflow-y-auto">
-        <div className="bu-page">
-        {/* Header */}
-        <div className="px-5 pt-12 pb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">My Requests</h1>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void refetch()} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted">
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
-            <Button size="sm" className="rounded-full" onClick={() => navigate('/post-need')}>
-              <Plus className="w-4 h-4 mr-1" /> New
-            </Button>
-          </div>
-        </div>
+      <div style={{ minHeight: '100%', background: '#f4f4f6', overflowY: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="bu-page" style={{ padding: '0 16px 40px' }}>
 
-        <div className="px-5 pb-8 space-y-6">
+          {/* ── Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '48px 0 20px', gap: 10 }}>
+            <h1 style={{ flex: 1, margin: 0, fontSize: 26, fontWeight: 800, color: '#111827', letterSpacing: '-0.5px' }}>
+              My Requests
+            </h1>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <RefreshCw style={{ width: 16, height: 16, color: '#374151', animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/post-need')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px',
+                borderRadius: 22, border: 'none', background: '#111827', color: '#fff',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              <Plus style={{ width: 15, height: 15 }} />
+              New
+            </button>
+          </div>
+
+          {/* ── Loading skeletons ── */}
           {isLoading && (
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />
+                <div key={i} style={{ height: 100, borderRadius: 18, background: '#e5e7eb', animation: 'pulse 1.5s ease-in-out infinite' }} />
               ))}
             </div>
           )}
 
+          {/* ── Empty state ── */}
           {!isLoading && needs.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Plus className="w-8 h-8 text-muted-foreground" />
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: 22, background: '#eff6ff', margin: '0 auto 20px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Plus style={{ width: 32, height: 32, color: '#2563eb' }} />
               </div>
-              <h2 className="font-semibold text-lg mb-2">No requests yet</h2>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+              <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800, color: '#111827' }}>No requests yet</h2>
+              <p style={{ margin: '0 0 28px', fontSize: 14, color: '#6b7280', lineHeight: 1.6, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>
                 Post your first need and get matched with verified helpers in your community.
               </p>
-              <Button onClick={() => navigate('/post-need')} className="rounded-full px-6">
-                Post a Need
-              </Button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 260, margin: '0 auto' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate('/post-need')}
+                  style={{
+                    padding: '13px 24px', borderRadius: 14, border: 'none',
+                    background: '#111827', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  <Plus style={{ width: 16, height: 16 }} />
+                  Post a Need
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/intake')}
+                  style={{
+                    padding: '13px 24px', borderRadius: 14, border: 'none',
+                    background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff',
+                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  <Sparkles style={{ width: 16, height: 16 }} />
+                  Ask AI Assistant
+                </button>
+              </div>
             </div>
           )}
 
+          {/* ── Active requests ── */}
           {!isLoading && active.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Active ({active.length})</h2>
-              <div className="space-y-2">
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Active
+                </p>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#dbeafe', color: '#1e40af' }}>
+                  {active.length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {active.map((need) => (
-                  <button key={need.id} type="button" className="w-full text-left" onClick={() => navigate(`/needs/${need.id}`)}>
+                  <button
+                    key={need.id}
+                    type="button"
+                    onClick={() => navigate(`/needs/${need.id}`)}
+                    style={{ all: 'unset', cursor: 'pointer', display: 'block' }}
+                  >
                     <NeedCard need={need} />
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
           )}
 
+          {/* ── Past requests ── */}
           {!isLoading && resolved.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Past ({resolved.length})</h2>
-              <div className="space-y-2">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Past
+                </p>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#f3f4f6', color: '#6b7280' }}>
+                  {resolved.length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {resolved.map((need) => (
-                  <button key={need.id} type="button" className="w-full text-left" onClick={() => navigate(`/needs/${need.id}`)}>
+                  <button
+                    key={need.id}
+                    type="button"
+                    onClick={() => navigate(`/needs/${need.id}`)}
+                    style={{ all: 'unset', cursor: 'pointer', display: 'block', opacity: 0.75 }}
+                  >
                     <NeedCard need={need} />
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </div>
-        </div>{/* bu-page */}
       </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
     </AppShell>
   );
 }
