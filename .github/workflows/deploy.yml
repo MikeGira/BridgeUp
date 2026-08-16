@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: 'package.json'
 
 
       - name: Install dependencies
@@ -89,7 +89,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: 'package.json'
 
 
       - name: Install dependencies
@@ -164,7 +164,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: 'package.json'
 
       - name: Install Vercel CLI (latest)
         run: npm install -g vercel@latest
