@@ -44,16 +44,19 @@ self.addEventListener('fetch', (e) => {
   // 2. Never cache API calls — always fresh data
   if (url.pathname.startsWith('/api/')) return;
 
+  // Matches a host exactly, or as a subdomain of it. `includes()` would also match an
+  // attacker-controlled host that merely CONTAINS the name — `unpkg.com.example.net` — so the
+  // rule below would silently apply to the wrong origin.
+  const isHost = (hostname, domain) => hostname === domain || hostname.endsWith('.' + domain);
+
   // 3. Never cache map tiles (CartoDB, OSM, Leaflet CDN)
+  // tile.openstreetmap.org is covered by the openstreetmap.org subdomain match.
   if (
-    url.hostname.includes('cartocdn.com') ||
-    url.hostname.includes('openstreetmap.org') ||
-    url.hostname.includes('unpkg.com') ||
-    url.hostname.includes('tile.openstreetmap.org')
+    ['cartocdn.com', 'openstreetmap.org', 'unpkg.com'].some((d) => isHost(url.hostname, d))
   ) return;
 
   // 4. Never cache Google Fonts network requests (they self-cache via their own SW)
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) return;
+  if (['fonts.googleapis.com', 'fonts.gstatic.com'].some((d) => isHost(url.hostname, d))) return;
 
   // 5. Navigation requests (HTML pages): network-first, fall back to cached shell
   if (request.mode === 'navigate') {
